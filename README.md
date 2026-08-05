@@ -1,3 +1,12 @@
+<p align="center">
+  <img src="assets/banner.png" alt="SistemMonitor Banner">
+</p>
+
+#  SistemMonitor
+
+Real-Time Windows System Monitoring
+
+
 \# SistemMonitor
 
 
@@ -22,7 +31,8 @@ A Windows desktop application for real-time system monitoring.
 
 \- Windows error log viewer
 
-\- Remote monitoring using QR Code(Works over the same Wi-Fi or LAN network)
+\- Remote monitoring using QR Code (Works over the same Wi-Fi or LAN network)
+
 
 
 
