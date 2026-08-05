@@ -22,9 +22,7 @@ A Windows desktop application for real-time system monitoring.
 
 \- Windows error log viewer
 
-\- Remote monitoring using QR Code
-
-\- Works over the same Wi-Fi or LAN network
+\- Remote monitoring using QR Code(Works over the same Wi-Fi or LAN network)
 
 
 
