@@ -224,6 +224,8 @@ PHONE_HTML = """
         const statusEl = document.getElementById('status');
         let eventSource = null;
         let lastNet = { down: 0, up: 0, time: Date.now() };
+        const urlToken = new URLSearchParams(window.location.search).get('t') || '';
+        const apiQS = urlToken ? '?t=' + encodeURIComponent(urlToken) : '';
         
         function fmtBytes(bytes) {
             const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -314,7 +316,7 @@ PHONE_HTML = """
         }
         
         function connectSSE() {
-            eventSource = new EventSource('/events');
+            eventSource = new EventSource('/events' + apiQS);
             eventSource.onmessage = function(e) {
                 try {
                     const data = JSON.parse(e.data);
@@ -332,7 +334,7 @@ PHONE_HTML = """
         
         async function fetchMetrics() {
             try {
-                const res = await fetch('/metrics');
+                const res = await fetch('/metrics' + apiQS);
                 const data = await res.json();
                 updateUI(data);
             } catch (err) {
