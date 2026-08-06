@@ -1,4 +1,4 @@
-import sys, os, psutil, time, warnings, subprocess, json, socket, threading, http.server, urllib.parse, base64, io
+import sys, os, psutil, time, warnings, subprocess, json, socket, threading, http.server, urllib.parse, base64, io, secrets
 from datetime import datetime, timedelta
 
 try:
@@ -56,12 +56,29 @@ class PhoneMetricsProvider:
 class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
     provider = None
     clients = []
+    token = None
+    
+    def _auth_ok(self, parsed):
+        if not self.token:
+            return True
+        qs = urllib.parse.parse_qs(parsed.query)
+        return qs.get("t", [""])[0] == self.token
+    
+    def _deny(self):
+        self.send_response(403)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write("Yetkisiz erisim. Gecersiz baglanti kodu.".encode("utf-8"))
     
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        if not self._auth_ok(parsed):
+            self._deny()
+            return
         if parsed.path == "/":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(PHONE_HTML.encode("utf-8"))
         elif parsed.path == "/metrics":
@@ -355,16 +372,26 @@ def get_local_ip():
 def start_phone_server(monitor):
     global _phone_server, _phone_server_thread
     if _phone_server:
-        return True, get_local_ip()
+        return True, get_local_ip(), PhoneRequestHandler.token
     try:
         PhoneRequestHandler.provider = PhoneMetricsProvider(monitor)
+        PhoneRequestHandler.token = secrets.token_urlsafe(16)
         _phone_server = http.server.ThreadingHTTPServer(("0.0.0.0", PHONE_SERVER_PORT), PhoneRequestHandler)
         _phone_server.daemon_threads = True
         _phone_server_thread = threading.Thread(target=_phone_server.serve_forever, daemon=True)
         _phone_server_thread.start()
-        return True, get_local_ip()
+        return True, get_local_ip(), PhoneRequestHandler.token
     except Exception as e:
-        return False, str(e)
+        return False, str(e), None
+
+def stop_phone_server():
+    global _phone_server, _phone_server_thread
+    if _phone_server:
+        _phone_server.shutdown()
+        _phone_server = None
+        _phone_server_thread = None
+        PhoneRequestHandler.token = None
+    return True
 
 def stop_phone_server():
     global _phone_server, _phone_server_thread
@@ -477,6 +504,12 @@ class Monitor(QMainWindow):
         self._phone_btn.setCheckable(True)
         self._phone_btn.clicked.connect(self._toggle_phone)
         tb.addWidget(self._phone_btn)
+        self._help_btn = QPushButton("?")
+        self._help_btn.setFixedSize(18,18)
+        self._help_btn.setToolTip("Kısayollar (F1)")
+        self._help_btn.setStyleSheet("QPushButton{background:rgba(60,60,80,200);border-radius:9px;color:#cdd6f4;font-weight:bold;border:none;} QPushButton:hover{background:rgba(80,80,100,220);}")
+        self._help_btn.clicked.connect(self._show_help)
+        tb.addWidget(self._help_btn)
         self._bm = QPushButton("-"); self._bm.setFixedSize(18,18)
         self._bm.setStyleSheet("QPushButton{background:rgba(60,60,80,200);border-radius:9px;color:#cdd6f4;font-weight:bold;border:none;} QPushButton:hover{background:rgba(80,80,100,220);}")
         self._bm.clicked.connect(lambda: self._rsz(-1))
@@ -518,7 +551,8 @@ class Monitor(QMainWindow):
         self._set_mode(False)
 
     def keyPressEvent(self, e):
-        if e.key() == Qt.Key_F4: self._set_mode(not self._cmp)
+        if e.key() == Qt.Key_F1: self._show_help()
+        elif e.key() == Qt.Key_F4: self._set_mode(not self._cmp)
         elif e.key() == Qt.Key_Escape and self._cmp: self._set_mode(False)
         elif e.key() == Qt.Key_F5: self._tick()
         elif e.key() == Qt.Key_F2: self._toggle_phone()
@@ -526,6 +560,10 @@ class Monitor(QMainWindow):
             if e.key() in (Qt.Key_B, 98): self._rsz(1)
             elif e.key() in (Qt.Key_S, 115): self._rsz(-1)
         super().keyPressEvent(e)
+
+    def _show_help(self):
+        d = WelcomeDialog()
+        d.exec()
 
     def _rsz(self, d):
         fsizes = [8,9,10,11,12,13,14,15,16]
@@ -578,6 +616,10 @@ class Monitor(QMainWindow):
         self._tray_phone_action.triggered.connect(self._toggle_phone)
         tray_menu.addAction(self._tray_phone_action)
         
+        help_action = QAction("Kısayollar", self)
+        help_action.triggered.connect(self._show_help)
+        tray_menu.addAction(help_action)
+        
         tray_menu.addSeparator()
         quit_action = QAction("Çıkış", self)
         quit_action.triggered.connect(self._quit_app)
@@ -621,7 +663,7 @@ class Monitor(QMainWindow):
             self._start_phone()
 
     def _start_phone(self):
-        ok, result = start_phone_server(self)
+        ok, result, token = start_phone_server(self)
         if ok:
             self._phone_active = True
             self._phone_btn.setChecked(True)
@@ -629,11 +671,12 @@ class Monitor(QMainWindow):
             self._tray_phone_action.setText("Telefon Bağlantısı: Açık")
             ip = result
             port = PHONE_SERVER_PORT
-            self._phone_dialog = PhoneConnectDialog(self, ip, port)
+            url = f"http://{ip}:{port}/?t={token}"
+            self._phone_dialog = PhoneConnectDialog(self, ip, port, token)
             result_code = self._phone_dialog.exec()
             if result_code == 1:
                 self.hide()
-                self._tray.showMessage("Sistem Monitoru", f"Telefon bağlantısı aktif: http://{ip}:{port}", QSystemTrayIcon.MessageIcon.Information, 3000)
+                self._tray.showMessage("Sistem Monitoru", f"Telefon bağlantısı aktif: {url}", QSystemTrayIcon.MessageIcon.Information, 3000)
             elif result_code == 2:
                 self._stop_phone()
         else:
@@ -829,10 +872,10 @@ def _exp(eid):
     return _EXP.get(eid, f"Hata kodu {eid}. Windows olay goruntuleyiciden detayli inceleyin.")
 
 class PhoneConnectDialog(QDialog):
-    def __init__(self, parent, ip, port):
+    def __init__(self, parent, ip, port, token=None):
         super().__init__(parent)
         self.setWindowTitle("Telefon Bağlantısı")
-        self.setFixedSize(340, 480)
+        self.setFixedSize(340, 510)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.setStyleSheet("""
             QDialog { background: #1e1e2e; border: 1px solid #45475a; border-radius: 8px; }
@@ -842,19 +885,20 @@ class PhoneConnectDialog(QDialog):
             QPushButton#stopBtn { background: #f38ba8; }
             QPushButton#stopBtn:hover { background: #f5a9b8; }
         """)
-        lo = QVBoxLayout(self); lo.setContentsMargins(20,16,20,16); lo.setSpacing(12)
+        lo = QVBoxLayout(self); lo.setContentsMargins(20,16,20,16); lo.setSpacing(10)
         
         title = QLabel("<b>Telefonla Bağlantı Aktif</b>")
         title.setStyleSheet("color:#cba6f7; font-size:14px; background:transparent;")
         title.setAlignment(Qt.AlignCenter)
         lo.addWidget(title)
         
-        url = f"http://{ip}:{port}"
+        url = f"http://{ip}:{port}/?t={token}" if token else f"http://{ip}:{port}"
         url_label = QLabel(f'<a href="{url}" style="color:#89b4fa;">{url}</a>')
-        url_label.setStyleSheet("font-size:13px; background:transparent;")
+        url_label.setStyleSheet("font-size:11px; background:transparent;")
         url_label.setAlignment(Qt.AlignCenter)
         url_label.setOpenExternalLinks(True)
         url_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        url_label.setWordWrap(True)
         lo.addWidget(url_label)
         
         if QRCODE_AVAILABLE:
@@ -883,6 +927,12 @@ class PhoneConnectDialog(QDialog):
             hint.setStyleSheet("color:#6c7086; font-size:11px; background:transparent;")
             hint.setAlignment(Qt.AlignCenter)
             lo.addWidget(hint)
+        
+        secure = QLabel("Bu bağlantı tek kullanımlık güvenlik koduyla korunuyor. Kod her açılışta değişir.")
+        secure.setStyleSheet("color:#a6e3a1; font-size:10px; background:transparent;")
+        secure.setAlignment(Qt.AlignCenter)
+        secure.setWordWrap(True)
+        lo.addWidget(secure)
         
         info = QLabel("Uygulama arka planda çalışmaya devam edecek.\nTelefondan değerleri görüntüleyebilirsiniz.")
         info.setStyleSheet("color:#a6adc8; font-size:11px; background:transparent;")
@@ -981,11 +1031,13 @@ class EventLogDialog(QDialog):
         self._loading.setStyleSheet("color:#a6e3a1; font-size:12px; background:transparent;")
 
 class WelcomeDialog(QDialog):
-    def __init__(self):
+    def __init__(self, first_run=False):
         super().__init__()
         self.setWindowTitle("Sistem Monitoru - Kisa Yollar")
-        self.setFixedSize(380, 340)
+        self.setFixedSize(380, 360)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        if first_run:
+            self.setWindowFlags(Qt.Dialog | Qt.WindowStaysOnTopHint | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.setStyleSheet("""
             QDialog { background: #1e1e2e; border: 1px solid #45475a; border-radius: 8px; }
             QLabel { color: #cdd6f4; background: transparent; }
@@ -1003,6 +1055,7 @@ class WelcomeDialog(QDialog):
         lo.addWidget(t)
 
         lines = [
+            "<b>F1</b>  - Bu kısayolları göster",
             "<b>F2</b>  - Telefon bağlantısını aç/kapat",
             "<b>F4</b>  - Gizli simgelere kucult / geri getir",
             "<b>Esc</b> - Overlay modundan gizli simgelere kucult",
@@ -1029,7 +1082,8 @@ def main():
     a.setQuitOnLastWindowClosed(False)
     s = QSettings("SistemMonitor", "SistemMonitor")
     if not s.value("nofirstrun", False, type=bool):
-        d = WelcomeDialog()
+        d = WelcomeDialog(first_run=True)
+        d.show(); d.raise_(); d.activateWindow()
         if d.exec() == QDialog.Accepted and d.cb.isChecked():
             s.setValue("nofirstrun", True)
     w = Monitor(); w.show(); sys.exit(a.exec())
