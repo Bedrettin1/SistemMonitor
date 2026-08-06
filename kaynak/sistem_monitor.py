@@ -33,6 +33,7 @@ except: pass
 PHONE_SERVER_PORT = 8080
 _phone_server = None
 _phone_server_thread = None
+_phone_stop_event = threading.Event()
 
 class PhoneMetricsProvider:
     def __init__(self, monitor):
@@ -100,8 +101,9 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.clients.append(self)
             try:
-                while True:
-                    time.sleep(2)
+                while not _phone_stop_event.is_set():
+                    if _phone_stop_event.wait(2):
+                        break
                     if self.provider:
                         data = json.dumps(self.provider.get_metrics())
                         self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
@@ -109,6 +111,14 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
             except:
                 pass
             finally:
+                try:
+                    self.connection.shutdown(socket.SHUT_RDWR)
+                except:
+                    pass
+                try:
+                    self.connection.close()
+                except:
+                    pass
                 if self in self.clients:
                     self.clients.remove(self)
         else:
@@ -376,6 +386,7 @@ def start_phone_server(monitor):
     if _phone_server:
         return True, get_local_ip(), PhoneRequestHandler.token
     try:
+        _phone_stop_event.clear()
         PhoneRequestHandler.provider = PhoneMetricsProvider(monitor)
         PhoneRequestHandler.token = secrets.token_urlsafe(16)
         _phone_server = http.server.ThreadingHTTPServer(("0.0.0.0", PHONE_SERVER_PORT), PhoneRequestHandler)
@@ -389,16 +400,27 @@ def start_phone_server(monitor):
 def stop_phone_server():
     global _phone_server, _phone_server_thread
     if _phone_server:
-        _phone_server.shutdown()
-        _phone_server = None
-        _phone_server_thread = None
+        _phone_stop_event.set()
+        for c in list(PhoneRequestHandler.clients):
+            try:
+                c.connection.shutdown(socket.SHUT_RDWR)
+            except:
+                pass
+            try:
+                c.connection.close()
+            except:
+                pass
+        PhoneRequestHandler.clients.clear()
         PhoneRequestHandler.token = None
-    return True
-
-def stop_phone_server():
-    global _phone_server, _phone_server_thread
-    if _phone_server:
-        _phone_server.shutdown()
+        PhoneRequestHandler.provider = None
+        try:
+            _phone_server.shutdown()
+        except:
+            pass
+        try:
+            _phone_server.server_close()
+        except:
+            pass
         _phone_server = None
         _phone_server_thread = None
     return True
