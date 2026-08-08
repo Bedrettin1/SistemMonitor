@@ -1,4 +1,4 @@
-import sys, os, psutil, time, warnings, subprocess, json, socket, threading, http.server, urllib.parse, base64, io, secrets
+import sys, os, psutil, time, warnings, subprocess, json, socket, threading, http.server, urllib.parse, base64, io, secrets, logging, textwrap
 from datetime import datetime, timedelta
 
 try:
@@ -12,8 +12,11 @@ try:
 except ImportError:
     raise SystemExit("PySide6 gerekli")
 
-try: import wmi; WMI = True
-except: WMI = False
+try:
+    import wmi
+    WMI = True
+except Exception:
+    WMI = False
 
 try:
     import qrcode
@@ -25,15 +28,37 @@ GPU = None
 try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        import pynvml; pynvml.nvmlInit()
+        import pynvml
+        pynvml.nvmlInit()
         if pynvml.nvmlDeviceGetCount() > 0:
             GPU = pynvml.nvmlDeviceGetHandleByIndex(0)
-except: pass
+except Exception:
+    GPU = None
 
 PHONE_SERVER_PORT = 8080
+PHONE_SESSION_TTL = 24 * 3600
+PHONE_PAIR_TTL = 60
+PHONE_MAX_CONNECTIONS = 50
+PHONE_RATE_LIMIT_PER_MIN = 60
+PHONE_SOCKET_TIMEOUT = 5.0
+POWERSHELL_EXE = r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+
 _phone_server = None
 _phone_server_thread = None
 _phone_stop_event = threading.Event()
+_phone_server_lock = threading.Lock()
+_phone_logger = logging.getLogger("sistemmonitor.phone")
+if not _phone_logger.handlers:
+    _phone_logger.setLevel(logging.INFO)
+    _lh = logging.StreamHandler()
+    _lh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    _phone_logger.addHandler(_lh)
+
+def _safe_log(msg):
+    try:
+        _phone_logger.info(msg)
+    except Exception:
+        pass
 
 class PhoneMetricsProvider:
     def __init__(self, monitor):
@@ -54,38 +79,200 @@ class PhoneMetricsProvider:
             "timestamp": ""
         }
 
+_sessions = {}
+_sessions_lock = threading.Lock()
+_pairing_code = None
+_pairing_expiry = 0.0
+_pairing_lock = threading.Lock()
+_rate_store = {}
+_rate_lock = threading.Lock()
+
+def _create_session():
+    sid = secrets.token_urlsafe(32)
+    with _sessions_lock:
+        _sessions[sid] = time.time() + PHONE_SESSION_TTL
+    return sid
+
+def _valid_session(sid):
+    if not sid:
+        return False
+    with _sessions_lock:
+        exp = _sessions.get(sid)
+        if exp is None:
+            return False
+        if time.time() > exp:
+            del _sessions[sid]
+            return False
+        return True
+
+def _rate_limited(ip):
+    now = time.time()
+    with _rate_lock:
+        ts = _rate_store.setdefault(ip, [])
+        ts = [t for t in ts if now - t < 60]
+        if len(ts) >= PHONE_RATE_LIMIT_PER_MIN:
+            _rate_store[ip] = ts
+            return True
+        ts.append(now)
+        _rate_store[ip] = ts
+        return False
+
+class _PhoneHTTPServer(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+    active_connections = 0
+    conn_lock = threading.Lock()
+
+    def process_request(self, request, client_address):
+        with self.conn_lock:
+            if self.active_connections >= PHONE_MAX_CONNECTIONS:
+                try:
+                    request.shutdown(socket.SHUT_RDWR)
+                    request.close()
+                except OSError:
+                    pass
+                _safe_log("HTTP: max baglanti sinirina ulasildi, istemci reddedildi")
+                return
+            self.active_connections += 1
+        try:
+            super().process_request(request, client_address)
+        finally:
+            with self.conn_lock:
+                self.active_connections -= 1
+
 class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
     provider = None
     clients = []
-    token = None
-    
-    def _auth_ok(self, parsed):
-        if not self.token:
+    clients_lock = threading.Lock()
+    server_version = "SistemMonitor"
+    timeout = PHONE_SOCKET_TIMEOUT
+    protocol_version = "HTTP/1.0"
+
+    def _client_ip(self):
+        return self.client_address[0] if self.client_address else "?"
+
+    def _host_ok(self):
+        host = self.headers.get("Host", "")
+        if not host:
+            return False
+        bind_ip = getattr(self.server, "server_address", ("127.0.0.1", PHONE_SERVER_PORT))[0]
+        allowed = {f"{bind_ip}:{PHONE_SERVER_PORT}", f"127.0.0.1:{PHONE_SERVER_PORT}",
+                   f"localhost:{PHONE_SERVER_PORT}", bind_ip}
+        return host in allowed
+
+    def _origin_ok(self):
+        origin = self.headers.get("Origin")
+        if not origin:
             return True
-        qs = urllib.parse.parse_qs(parsed.query)
-        return qs.get("t", [""])[0] == self.token
-    
-    def _deny(self):
-        self.send_response(403)
+        bind_ip = getattr(self.server, "server_address", ("127.0.0.1", PHONE_SERVER_PORT))[0]
+        allowed = {f"http://{bind_ip}:{PHONE_SERVER_PORT}", f"http://127.0.0.1:{PHONE_SERVER_PORT}",
+                   f"http://localhost:{PHONE_SERVER_PORT}"}
+        return origin in allowed
+
+    def _session_from_cookie(self):
+        raw = self.headers.get("Cookie", "")
+        for part in raw.split(";"):
+            part = part.strip()
+            if part.startswith("sm_session="):
+                return part[len("sm_session="):]
+        return None
+
+    def _deny(self, code=403, msg=None):
+        self.send_response(code)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write("Yetkisiz erisim. Gecersiz baglanti kodu.".encode("utf-8"))
-    
-    def do_GET(self):
+        body = (msg or "Yetkisiz erisim.").encode("utf-8")
+        self.wfile.write(body)
+
+    def log_message(self, fmt, *args):
+        token = ""
+        try:
+            qs = urllib.parse.urlparse(self.path).query
+            q = urllib.parse.parse_qs(qs)
+            if "c" in q:
+                token = " [pair]"
+        except Exception:
+            pass
+        _safe_log(f"HTTP {self.command} {self.path} -> {fmt % args}{token} ip={self._client_ip()}")
+
+    def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
-        if not self._auth_ok(parsed):
-            self._deny()
+        if parsed.path == "/api/pair":
+            self._handle_pair()
+        else:
+            self._deny(404, "Bulunamadi.")
+
+    def _handle_pair(self):
+        global _pairing_code, _pairing_expiry
+        ip = self._client_ip()
+        if _rate_limited(ip):
+            _safe_log("PAIR: rate limit asildi")
+            self._deny(429, "Cok fazla istek.")
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(length).decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        try:
+            data = json.loads(body or "{}")
+            code = str(data.get("code", ""))
+        except (ValueError, AttributeError):
+            self._deny(400, "Gecersiz istek.")
+            return
+        with _pairing_lock:
+            ok = (_pairing_code is not None
+                  and code
+                  and secrets.compare_digest(_pairing_code.encode(), code.encode())
+                  and time.time() <= _pairing_expiry)
+            if not ok:
+                _safe_log("PAIR: gecersiz/suresi dolmus/tekrar kullanilan kod reddedildi")
+                self._deny(403, "Gecersiz veya suresi dolmus baglanti kodu.")
+                return
+            _pairing_code = None
+            _pairing_expiry = 0.0
+        sid = _create_session()
+        _safe_log("PAIR: basarili, session olusturuldu")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Set-Cookie", f"sm_session={sid}; HttpOnly; SameSite=Strict; Path=/")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(json.dumps({"ok": True}).encode("utf-8"))
+
+    def do_GET(self):
+        ip = self._client_ip()
+        parsed = urllib.parse.urlparse(self.path)
+        if not self._host_ok():
+            _safe_log(f"GET: gecersiz Host header {self.headers.get('Host')!r}")
+            self._deny(403, "Gecersiz host.")
+            return
+        if not self._origin_ok():
+            _safe_log(f"GET: izin verilmeyen Origin {self.headers.get('Origin')!r}")
+            self._deny(403, "Gecersiz origin.")
             return
         if parsed.path == "/":
+            if _rate_limited(ip):
+                self._deny(429, "Cok fazla istek.")
+                return
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(PHONE_HTML.encode("utf-8"))
-        elif parsed.path == "/metrics":
+            return
+        sid = self._session_from_cookie()
+        if not _valid_session(sid):
+            _safe_log(f"GET: oturum yok/gecersiz -> 403 {parsed.path}")
+            self._deny(403, "Gecersiz oturum.")
+            return
+        if _rate_limited(ip):
+            self._deny(429, "Cok fazla istek.")
+            return
+        if parsed.path == "/metrics":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             if self.provider:
                 data = json.dumps(self.provider.get_metrics())
@@ -97,9 +284,9 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.send_header("Connection", "keep-alive")
-            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            self.clients.append(self)
+            with self.clients_lock:
+                self.clients.append(self)
             try:
                 while not _phone_stop_event.is_set():
                     if _phone_stop_event.wait(2):
@@ -108,25 +295,22 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
                         data = json.dumps(self.provider.get_metrics())
                         self.wfile.write(f"data: {data}\n\n".encode("utf-8"))
                         self.wfile.flush()
-            except:
+            except (BrokenPipeError, ConnectionResetError, OSError):
                 pass
             finally:
                 try:
                     self.connection.shutdown(socket.SHUT_RDWR)
-                except:
+                except OSError:
                     pass
                 try:
                     self.connection.close()
-                except:
+                except OSError:
                     pass
-                if self in self.clients:
-                    self.clients.remove(self)
+                with self.clients_lock:
+                    if self in self.clients:
+                        self.clients.remove(self)
         else:
-            self.send_response(404)
-            self.end_headers()
-    
-    def log_message(self, format, *args):
-        pass
+            self._deny(404, "Bulunamadi.")
 
 PHONE_HTML = """
 <!DOCTYPE html>
@@ -233,9 +417,8 @@ PHONE_HTML = """
     <script>
         const statusEl = document.getElementById('status');
         let eventSource = null;
+        let sseTimer = null;
         let lastNet = { down: 0, up: 0, time: Date.now() };
-        const urlToken = new URLSearchParams(window.location.search).get('t') || '';
-        const apiQS = urlToken ? '?t=' + encodeURIComponent(urlToken) : '';
         
         function fmtBytes(bytes) {
             const units = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -326,8 +509,11 @@ PHONE_HTML = """
         }
         
         function connectSSE() {
-            eventSource = new EventSource('/events' + apiQS);
-            eventSource.onmessage = function(e) {
+            if (sseTimer) { clearTimeout(sseTimer); sseTimer = null; }
+            if (eventSource) { eventSource.close(); eventSource = null; }
+            const es = new EventSource('/events');
+            eventSource = es;
+            es.onmessage = function(e) {
                 try {
                     const data = JSON.parse(e.data);
                     updateUI(data);
@@ -335,16 +521,26 @@ PHONE_HTML = """
                     console.error('Parse error:', err);
                 }
             };
-            eventSource.onerror = function() {
-                statusEl.textContent = 'Bağlantı koptu, yeniden deneniyor...';
-                statusEl.className = 'status disconnected';
-                setTimeout(connectSSE, 3000);
+            es.onerror = function() {
+                if (eventSource === es) {
+                    es.close();
+                    eventSource = null;
+                    statusEl.textContent = 'Bağlantı koptu, yeniden deneniyor...';
+                    statusEl.className = 'status disconnected';
+                    sseTimer = setTimeout(connectSSE, 3000);
+                }
             };
         }
         
         async function fetchMetrics() {
             try {
-                const res = await fetch('/metrics' + apiQS);
+                const res = await fetch('/metrics', { credentials: 'same-origin' });
+                if (res.status === 403) {
+                    statusEl.textContent = 'Oturum süresi doldu';
+                    statusEl.className = 'status disconnected';
+                    if (eventSource) { eventSource.close(); eventSource = null; }
+                    return;
+                }
                 const data = await res.json();
                 updateUI(data);
             } catch (err) {
@@ -353,16 +549,48 @@ PHONE_HTML = """
             }
         }
         
-        if (typeof EventSource !== 'undefined') {
-            connectSSE();
-        } else {
-            setInterval(fetchMetrics, 2000);
-            fetchMetrics();
+        async function startMonitoring() {
+            if (typeof EventSource !== 'undefined') {
+                connectSSE();
+            } else {
+                setInterval(fetchMetrics, 2000);
+                fetchMetrics();
+            }
         }
+        
+        async function tryPair(code) {
+            if (!code) return false;
+            try {
+                const res = await fetch('/api/pair', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ code: code })
+                });
+                if (res.ok) {
+                    history.replaceState(null, '', window.location.pathname);
+                    startMonitoring();
+                    return true;
+                }
+                statusEl.textContent = 'Bağlantı kodu hatalı';
+                statusEl.className = 'status disconnected';
+            } catch (err) {
+                statusEl.textContent = 'Bağlantı hatası';
+                statusEl.className = 'status disconnected';
+            }
+            return false;
+        }
+        
+        window.addEventListener('load', function() {
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('c');
+            tryPair(code);
+        });
         
         document.addEventListener('visibilitychange', function() {
             if (document.visibilityState === 'visible' && eventSource) {
                 eventSource.close();
+                eventSource = null;
                 connectSSE();
             }
         });
@@ -371,58 +599,106 @@ PHONE_HTML = """
 </html>
 """
 
-def get_local_ip():
+def _list_adapters():
+    """Güvenilir yerel ağ adaptörlerini listeler. VPN/public/sanal adaptörleri hariç tutar."""
+    results = []
+    skip_names = ("virtual", "vpn", "tun", "tap", "docker", "vmware", "virtualbox",
+                  "hyper-v", "vethernet", "wsl", "loopback", "bluetooth", "hamachi",
+                  "zerotier", "tailscale", "wireguard", "openvpn", "vEthernet",
+                  "Default Switch", "Ethernet 2", "isatap", "teredo")
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "127.0.0.1"
+        ifaces = psutil.net_if_addrs()
+    except Exception:
+        return results
+    for name, addrs in ifaces.items():
+        low = name.lower()
+        if any(k in low for k in skip_names):
+            continue
+        for a in addrs:
+            if a.family == socket.AF_INET and a.address:
+                ip = a.address
+                if ip.startswith("169.254."):
+                    continue
+                if not ip.startswith(("10.", "192.168.", "172.")):
+                    continue
+                try:
+                    if ip.startswith("172."):
+                        second = int(ip.split(".")[1])
+                        if not (16 <= second <= 31):
+                            continue
+                except ValueError:
+                    continue
+                results.append((name, ip))
+    return results
+
+def get_local_ip():
+    adapters = _list_adapters()
+    if adapters:
+        return adapters[0][1]
+    return "127.0.0.1"
 
 def start_phone_server(monitor):
-    global _phone_server, _phone_server_thread
-    if _phone_server:
-        return True, get_local_ip(), PhoneRequestHandler.token
-    try:
-        _phone_stop_event.clear()
-        PhoneRequestHandler.provider = PhoneMetricsProvider(monitor)
-        PhoneRequestHandler.token = secrets.token_urlsafe(16)
-        _phone_server = http.server.ThreadingHTTPServer(("0.0.0.0", PHONE_SERVER_PORT), PhoneRequestHandler)
-        _phone_server.daemon_threads = True
-        _phone_server_thread = threading.Thread(target=_phone_server.serve_forever, daemon=True)
-        _phone_server_thread.start()
-        return True, get_local_ip(), PhoneRequestHandler.token
-    except Exception as e:
-        return False, str(e), None
+    global _phone_server, _phone_server_thread, _pairing_code, _pairing_expiry
+    with _phone_server_lock:
+        if _phone_server:
+            return True, get_local_ip(), _pairing_code
+        adapters = _list_adapters()
+        if not adapters:
+            _safe_log("PHONE: guvenli adaptor bulunamadi, sunucu acilmadi")
+            return False, "Güvenli yerel ağ adaptörü bulunamadı (VPN/sanal/public ağlar desteklenmez).", None
+        bind_ip = adapters[0][1]
+        bind_name = adapters[0][0]
+        try:
+            _phone_stop_event.clear()
+            PhoneRequestHandler.provider = PhoneMetricsProvider(monitor)
+            _pairing_code = secrets.token_urlsafe(6)
+            _pairing_expiry = time.time() + PHONE_PAIR_TTL
+            _phone_server = _PhoneHTTPServer((bind_ip, PHONE_SERVER_PORT), PhoneRequestHandler)
+            _phone_server_thread = threading.Thread(target=_phone_server.serve_forever, daemon=True)
+            _phone_server_thread.start()
+            _safe_log(f"PHONE: sunucu {bind_ip}:{PHONE_SERVER_PORT} ({bind_name}) üzerinde baslatildi")
+            return True, bind_ip, _pairing_code
+        except Exception as e:
+            _phone_server = None
+            _phone_server_thread = None
+            _safe_log(f"PHONE: sunucu baslatilamadi: {e}")
+            return False, f"Telefon sunucusu başlatılamadı: {e}", None
 
 def stop_phone_server():
-    global _phone_server, _phone_server_thread
-    if _phone_server:
-        _phone_stop_event.set()
-        for c in list(PhoneRequestHandler.clients):
+    global _phone_server, _phone_server_thread, _pairing_code, _pairing_expiry
+    with _phone_server_lock:
+        if _phone_server:
+            _phone_stop_event.set()
+            with PhoneRequestHandler.clients_lock:
+                for c in list(PhoneRequestHandler.clients):
+                    try:
+                        c.connection.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+                    try:
+                        c.connection.close()
+                    except OSError:
+                        pass
+                PhoneRequestHandler.clients.clear()
+            PhoneRequestHandler.provider = None
+            with _pairing_lock:
+                _pairing_code = None
+                _pairing_expiry = 0.0
+            with _sessions_lock:
+                _sessions.clear()
+            with _rate_lock:
+                _rate_store.clear()
             try:
-                c.connection.shutdown(socket.SHUT_RDWR)
-            except:
+                _phone_server.shutdown()
+            except Exception:
                 pass
             try:
-                c.connection.close()
-            except:
+                _phone_server.server_close()
+            except Exception:
                 pass
-        PhoneRequestHandler.clients.clear()
-        PhoneRequestHandler.token = None
-        PhoneRequestHandler.provider = None
-        try:
-            _phone_server.shutdown()
-        except:
-            pass
-        try:
-            _phone_server.server_close()
-        except:
-            pass
-        _phone_server = None
-        _phone_server_thread = None
+            _phone_server = None
+            _phone_server_thread = None
+            _safe_log("PHONE: sunucu durduruldu")
     return True
 
 def tcolor(t):
@@ -687,7 +963,7 @@ class Monitor(QMainWindow):
             self._start_phone()
 
     def _start_phone(self):
-        ok, result, token = start_phone_server(self)
+        ok, result, pair = start_phone_server(self)
         if ok:
             self._phone_active = True
             self._phone_btn.setChecked(True)
@@ -695,8 +971,8 @@ class Monitor(QMainWindow):
             self._tray_phone_action.setText("Telefon Bağlantısı: Açık")
             ip = result
             port = PHONE_SERVER_PORT
-            url = f"http://{ip}:{port}/?t={token}"
-            self._phone_dialog = PhoneConnectDialog(self, ip, port, token)
+            url = f"http://{ip}:{port}/?c={pair}"
+            self._phone_dialog = PhoneConnectDialog(self, ip, port, pair)
             result_code = self._phone_dialog.exec()
             if result_code == 1:
                 self.hide()
@@ -718,13 +994,17 @@ class Monitor(QMainWindow):
 
     def _gt(self):
         if not GPU: return None
-        try: return pynvml.nvmlDeviceGetTemperature(GPU, pynvml.NVML_TEMPERATURE_GPU)
-        except: return None
+        try:
+            return pynvml.nvmlDeviceGetTemperature(GPU, pynvml.NVML_TEMPERATURE_GPU)
+        except (pynvml.NVMLError, OSError):
+            return None
 
     def _gu(self):
         if not GPU: return None
-        try: return pynvml.nvmlDeviceGetUtilizationRates(GPU).gpu
-        except: return None
+        try:
+            return pynvml.nvmlDeviceGetUtilizationRates(GPU).gpu
+        except (pynvml.NVMLError, OSError):
+            return None
 
     def _ct(self):
         if not WMI: return None
@@ -732,7 +1012,8 @@ class Monitor(QMainWindow):
             import wmi as _w
             t = _w.WMI(namespace="root\\CIMv2").Win32_PerfFormattedData_Counters_ThermalZoneInformation()
             if t: v = int(t[0].Temperature)/10; return v if 0 < v < 120 else None
-        except: pass
+        except Exception:
+            pass
         return None
 
     def _fb(self, b):
@@ -749,7 +1030,7 @@ class Monitor(QMainWindow):
         try:
             since = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
             r = subprocess.run(
-                ["powershell", "-NoProfile", "-Command",
+                [POWERSHELL_EXE, "-NoProfile", "-Command",
                  f"$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-WinEvent -FilterHashtable @{{LogName='System'; Level=1,2; StartTime='{since}'}} -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count"],
                 capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
             cnt = r.stdout.decode('utf-8', errors='replace').strip()
@@ -757,13 +1038,14 @@ class Monitor(QMainWindow):
                 self._ev_cache = ("0", None)
                 return self._ev_cache
             r2 = subprocess.run(
-                ["powershell", "-NoProfile", "-Command",
+                [POWERSHELL_EXE, "-NoProfile", "-Command",
                  f"$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-WinEvent -FilterHashtable @{{LogName='System'; Level=1; StartTime='{since}'}} -MaxEvents 1 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Message"],
                 capture_output=True, timeout=10, creationflags=subprocess.CREATE_NO_WINDOW)
             msg = r2.stdout.decode('utf-8', errors='replace').strip()[:120] if r2.stdout else None
             self._ev_cache = (cnt, msg)
             return self._ev_cache
-        except:
+        except (subprocess.SubprocessError, OSError, ValueError) as e:
+            _safe_log(f"EVENT: sayim hatasi: {e}")
             self._ev_cache = (None, None)
             return self._ev_cache
 
@@ -771,7 +1053,7 @@ class Monitor(QMainWindow):
         try:
             since = (datetime.now() - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%S")
             r = subprocess.run(
-                ["powershell", "-NoProfile", "-Command",
+                [POWERSHELL_EXE, "-NoProfile", "-Command",
                  f"$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8; Get-WinEvent -FilterHashtable @{{LogName='System'; Level=1,2; StartTime='{since}'}} -MaxEvents 30 -ErrorAction SilentlyContinue | Select-Object @{{N='T';E={{$_.TimeCreated.ToString('yyyy-MM-dd HH:mm')}}}},Id,LevelDisplayName,ProviderName,Message | ConvertTo-Json"],
                 capture_output=True, timeout=15, creationflags=subprocess.CREATE_NO_WINDOW)
             import json
@@ -782,7 +1064,8 @@ class Monitor(QMainWindow):
             if not data: return []
             if isinstance(data, dict): data = [data]
             return data
-        except:
+        except (subprocess.SubprocessError, OSError, ValueError, json.JSONDecodeError) as e:
+            _safe_log(f"EVENT: liste hatasi: {e}")
             return []
 
     def _open_event_log(self):
@@ -891,15 +1174,17 @@ _EXP = {
 }
 
 def _exp(eid):
-    try: eid = int(eid)
-    except: return "Bilinmeyen hata kodu."
+    try:
+        eid = int(eid)
+    except (ValueError, TypeError):
+        return "Bilinmeyen hata kodu."
     return _EXP.get(eid, f"Hata kodu {eid}. Windows olay goruntuleyiciden detayli inceleyin.")
 
 class PhoneConnectDialog(QDialog):
-    def __init__(self, parent, ip, port, token=None):
+    def __init__(self, parent, ip, port, pair=None):
         super().__init__(parent)
         self.setWindowTitle("Telefon Bağlantısı")
-        self.setFixedSize(340, 510)
+        self.setFixedSize(340, 560)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.setStyleSheet("""
             QDialog { background: #1e1e2e; border: 1px solid #45475a; border-radius: 8px; }
@@ -916,7 +1201,12 @@ class PhoneConnectDialog(QDialog):
         title.setAlignment(Qt.AlignCenter)
         lo.addWidget(title)
         
-        url = f"http://{ip}:{port}/?t={token}" if token else f"http://{ip}:{port}"
+        addr = QLabel(f"<b>{ip}</b>:<b>{port}</b>")
+        addr.setStyleSheet("color:#89b4fa; font-size:12px; background:transparent;")
+        addr.setAlignment(Qt.AlignCenter)
+        lo.addWidget(addr)
+
+        url = f"http://{ip}:{port}/?c={pair}" if pair else f"http://{ip}:{port}"
         url_label = QLabel(f'<a href="{url}" style="color:#89b4fa;">{url}</a>')
         url_label.setStyleSheet("font-size:11px; background:transparent;")
         url_label.setAlignment(Qt.AlignCenter)
@@ -944,19 +1234,27 @@ class PhoneConnectDialog(QDialog):
                 hint.setStyleSheet("color:#6c7086; font-size:11px; background:transparent;")
                 hint.setAlignment(Qt.AlignCenter)
                 lo.addWidget(hint)
-            except:
-                pass
+            except Exception:
+                _safe_log("QR olusturulamadi")
         else:
             hint = QLabel("QR kod için: pip install qrcode[pil]")
             hint.setStyleSheet("color:#6c7086; font-size:11px; background:transparent;")
             hint.setAlignment(Qt.AlignCenter)
             lo.addWidget(hint)
-        
-        secure = QLabel("Bu bağlantı tek kullanımlık güvenlik koduyla korunuyor. Kod her açılışta değişir.")
+
+        secure = QLabel("Bağlantı kodu 60 saniye geçerli ve tek kullanımlıktır. "
+                        "Kod kullanıldıktan sonra oturum çereziyle erişim sağlanır.")
         secure.setStyleSheet("color:#a6e3a1; font-size:10px; background:transparent;")
         secure.setAlignment(Qt.AlignCenter)
         secure.setWordWrap(True)
         lo.addWidget(secure)
+        
+        local_only = QLabel("⚠ Yalnızca bu yerel ağ IP adresine bağlanılabilir.\n"
+                            "VPN, sanal veya public ağlarda sunucu açılmaz.")
+        local_only.setStyleSheet("color:#f9e2af; font-size:10px; background:transparent;")
+        local_only.setAlignment(Qt.AlignCenter)
+        local_only.setWordWrap(True)
+        lo.addWidget(local_only)
         
         info = QLabel("Uygulama arka planda çalışmaya devam edecek.\nTelefondan değerleri görüntüleyebilirsiniz.")
         info.setStyleSheet("color:#a6adc8; font-size:11px; background:transparent;")
@@ -1020,32 +1318,37 @@ class EventLogDialog(QDialog):
             cw = QWidget(); cw.setStyleSheet("background:transparent;")
             cl = QVBoxLayout(cw); cl.setSpacing(6); cl.setContentsMargins(0,0,0,0)
             for ev in events:
-                tid = ev.get("T","?")
-                eid = ev.get("Id","?")
-                lvl = ev.get("LevelDisplayName","?")
-                src = ev.get("ProviderName","?")
-                msg = (ev.get("Message") or "")[:200]
+                tid = str(ev.get("T","?"))
+                eid = str(ev.get("Id","?"))
+                lvl = str(ev.get("LevelDisplayName","?"))
+                src = str(ev.get("ProviderName","?"))
+                msg = str(ev.get("Message") or "")[:200]
                 fb = QFrame()
                 fb.setStyleSheet("QFrame{background:#181825;border-radius:6px;border:1px solid #313244;}")
                 fl = QVBoxLayout(fb); fl.setContentsMargins(10,8,10,8); fl.setSpacing(3)
                 hb = QHBoxLayout(); hb.setSpacing(6)
                 el = QLabel(f"[{eid}] {lvl}")
+                el.setTextFormat(Qt.PlainText)
                 el.setStyleSheet("color:#f38ba8;font-size:11px;font-weight:bold;background:transparent;")
                 hb.addWidget(el)
                 tl = QLabel(tid)
+                tl.setTextFormat(Qt.PlainText)
                 tl.setStyleSheet("color:#6c7086;font-size:10px;background:transparent;")
                 hb.addWidget(tl)
                 hb.addStretch()
                 sl = QLabel(src)
+                sl.setTextFormat(Qt.PlainText)
                 sl.setStyleSheet("color:#89b4fa;font-size:10px;background:transparent;")
                 hb.addWidget(sl)
                 fl.addLayout(hb)
                 if msg:
                     ml = QLabel(msg)
+                    ml.setTextFormat(Qt.PlainText)
                     ml.setWordWrap(True)
                     ml.setStyleSheet("color:#bac2de; font-size:10px; background:transparent; padding:2px 0;")
                     fl.addWidget(ml)
                 xl = QLabel(f"{_exp(eid)}")
+                xl.setTextFormat(Qt.PlainText)
                 xl.setWordWrap(True)
                 xl.setStyleSheet("color:#a6e3a1; font-size:10px; font-style:italic; background:transparent; padding:2px 0;")
                 fl.addWidget(xl)

@@ -1,0 +1,51 @@
+name: Security & Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install deps
+        run: |
+          pip install -r kaynak/requirements.txt
+          pip install bandit ruff pip-audit
+
+      - name: Bandit security scan
+        run: bandit -r kaynak/ --exclude kaynak/build,kaynak/dist,kaynak/dist2 -f txt -q || true
+
+      - name: Ruff lint
+        run: ruff check kaynak/sistem_monitor.py kaynak/calistir.py || true
+
+      - name: pip-audit (CVE check)
+        run: pip-audit -r kaynak/requirements.txt || true
+
+      - name: Semgrep scan
+        run: |
+          pip install semgrep
+          semgrep --config auto --error --exclude 'build/**' --exclude 'dist/**' --exclude 'dist2/**' kaynak/ || true
+
+  compile:
+    name: Compile check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Syntax check
+        run: |
+          python -m py_compile kaynak/sistem_monitor.py
+          python -m py_compile kaynak/calistir.py
