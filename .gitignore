@@ -1,6 +1,7 @@
 __pycache__/
 build/
 dist/
+dist2/
 *.pyc
 *.log
 .vscode/
