@@ -32,13 +32,37 @@ Telefon bağlantısı **varsayılan olarak kapalıdır**. Açıldığında:
 - Pairing sonrası tarayıcıya `HttpOnly; SameSite=Strict` **oturum çerezi** verilir; kalıcı token URL'de taşınmaz.
 - Token karşılaştırması `secrets.compare_digest()` ile yapılır.
 - Kimlik doğrulama **fail-closed**: token/session yoksa her istek 403 alır.
-- **Host ve Origin doğrulaması**: yanlış Host header veya yabancı Origin reddedilir.
+- **Host ve Origin doğrulaması**: Host/Origin her iki HTTP metodu için de (GET ve POST) doğrulanır;
+  IPv4, IPv6 loopback (`[::1]`), `localhost` desteklenir; yanlış port veya enjeksiyon reddedilir.
 - `Access-Control-Allow-Origin` **yoktur**; API çapraz kaynaklı isteklere açık değildir.
-- IP başına **rate limit** (60 istek/dakika), socket timeout, header limit ve **maksimum 50 eşzamanlı bağlantı**.
+- **Endpoint bazlı rate limit**: `pairing`, `page`, `metrics`, `events` ayrı kovalardadır.
+  Pairing 10 istek/dk ile sıkı sınırlıdır; telemetry trafiği pairing limitini tüketmez.
+- **Request body limiti**: 4 KB üzeri istekler 413, bozuk Content-Length/JSON 400 alır.
+- **Security headers**: `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `Cache-Control: no-store` ve tarayıcıyı kırmayacak minimum `Content-Security-Policy`.
+- **Periyodik cleanup**: süresi dolan oturumlar ve rate-limit kayıtları düzenli temizlenir (bellek büyümesi yok).
 - SSE istemci listesi `threading.Lock()` ile korunur; her istemci için tek EventSource bağlantısı.
+- **Log güvenliği**: pairing kodu ve oturum kimlikleri log'larda maskelenir.
 - Windows Event Log metinleri yalnızca **PlainText** olarak gösterilir (HTML render yok).
 - `powershell.exe` yalnızca tam sistem yolundan çağrılır: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`.
 - `calistir.py` `%TEMP%` dizinini Python path'ine eklemez.
+
+### Taşıma güvenliği (TLS)
+
+Telefon bağlantısı **LAN içindir**; varsayılan **HTTP** modunda trafik **şifreli değildir**. Aynı
+ağdaki kötü niyetli bir düğüm verileri dinleyebilir. Public internet'e port forward **önerilmez**.
+
+Opsiyonel **HTTPS**: sertifika ve private key dosyaları verilirse sunucu TLS ile başlar ve
+session cookie'ye `Secure` flag'i eklenir. Self-signed sertifika kullanılabilir.
+
+```powershell
+# Sertifika + key üretme (OpenSSL):
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+TLS, `start_phone_server(monitor, tls_cert="cert.pem", tls_key="key.pem")` ile etkinleştirilir.
+Sertifika/key yalnızca biri verilirse veya dosya bulunamazsa sunucu **HTTPS'e sessizce düşmez**;
+kullanıcıya açık hata gösterilir. HTTP modunda arayüz ve sayfada şifresiz bağlantı uyarısı görüntülenir.
 
 ## 🖥️ Kurulum
 
@@ -80,13 +104,16 @@ python kaynak/sistem_monitor.py
 python kaynak/test_security.py
 ```
 
-Güvenlik testleri: yanlış/süresi dolmuş/tekrar kullanılan token, rate limit,
-100 eşzamanlı bağlantı, SSE kopma, sunucu kapanırken açık istemciler,
-VPN/public adaptöre bind edilmeme, token'sız erişim, CORS/Host doğrulaması.
+Güvenlik testleri: yanlış/süresi dolmuş/tekrar kullanılan token, rate limit (endpoint bazlı),
+brute-force pairing, request body limiti, 100 eşzamanlı bağlantı, SSE kopma/cleanup,
+VPN/public adaptöre bind edilmeme, token'sız erişim, CORS/Host doğrulaması, Host IPv6/port
+varyasyonları, session auth (yanlış/süresi dolmuş/revoke), expired cleanup, Event Log JSON
+normalizasyonu, ağ hızı hesabı, TLS cookie/validasyon ve log redaction.
 
 ## 🔍 Sürekli Güvenlik (GitHub Actions)
 
-- `security.yml`: Bandit, Ruff, pip-audit (CVE) ve Semgrep taramaları her push/PR'de çalışır.
+- `security.yml`: Bandit, Ruff, pip-audit (CVE) ve Semgrep taramaları + **security/regression testleri**
+  her push/PR'de çalışır (test hatası pipeline'ı durdurur).
 - `release.yml`: `v*` tag'lerinde otomatik build alır; EXE, kaynak, SHA-256 ve SBOM'u release'e yükler.
 
 ## 🖥️ Gereksinimler
