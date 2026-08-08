@@ -972,7 +972,7 @@ class Monitor(QMainWindow):
             ip = result
             port = PHONE_SERVER_PORT
             url = f"http://{ip}:{port}/?c={pair}"
-            self._phone_dialog = PhoneConnectDialog(self, ip, port, pair)
+            self._phone_dialog = PhoneConnectDialog(self, ip, port, pair, _pairing_expiry)
             result_code = self._phone_dialog.exec()
             if result_code == 1:
                 self.hide()
@@ -1181,10 +1181,12 @@ def _exp(eid):
     return _EXP.get(eid, f"Hata kodu {eid}. Windows olay goruntuleyiciden detayli inceleyin.")
 
 class PhoneConnectDialog(QDialog):
-    def __init__(self, parent, ip, port, pair=None):
+    def __init__(self, parent, ip, port, pair=None, expiry=None):
         super().__init__(parent)
+        self._expiry = expiry or (time.time() + PHONE_PAIR_TTL)
+        self._countdown_timer = None
         self.setWindowTitle("Telefon Bağlantısı")
-        self.setFixedSize(340, 560)
+        self.setFixedSize(380, 580)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.setStyleSheet("""
             QDialog { background: #1e1e2e; border: 1px solid #45475a; border-radius: 8px; }
@@ -1263,7 +1265,12 @@ class PhoneConnectDialog(QDialog):
         lo.addWidget(info)
         
         lo.addStretch()
-        
+
+        self.countdown_label = QLabel("")
+        self.countdown_label.setStyleSheet("color:#f9e2af; font-size:15px; font-weight:bold; background:transparent;")
+        self.countdown_label.setAlignment(Qt.AlignCenter)
+        lo.addWidget(self.countdown_label)
+
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         self.minimize_btn = QPushButton("Simgeye Küçült")
@@ -1276,6 +1283,25 @@ class PhoneConnectDialog(QDialog):
         btn_layout.addWidget(self.stop_btn)
         
         lo.addLayout(btn_layout)
+
+        self._countdown_timer = QTimer(self)
+        self._countdown_timer.timeout.connect(self._update_countdown)
+        self._countdown_timer.start(500)
+        self._update_countdown()
+
+    def _update_countdown(self):
+        left = max(0, int(self._expiry - time.time()))
+        if left > 0:
+            self.countdown_label.setText(f"Bağlantı süresi: {left} sn")
+        else:
+            self.countdown_label.setText("Bağlantı kodu süresi doldu")
+            if self._countdown_timer:
+                self._countdown_timer.stop()
+
+    def done(self, result):
+        if self._countdown_timer:
+            self._countdown_timer.stop()
+        super().done(result)
 
 class EventLogDialog(QDialog):
     def __init__(self, parent=None):
