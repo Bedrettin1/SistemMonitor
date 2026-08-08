@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
 """SistemMonitor güvenlik testleri. Kullanım: python test_security.py"""
 import sys, os, time, socket, json, http.client, threading, logging, io, tempfile
+
+# Türkçe karakterlerin cp1252 konsolelarda bozulmadan yazılabilmesi için UTF-8 zorla.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, ValueError):
+    pass
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sistem_monitor as sm
 
@@ -18,6 +26,24 @@ def check(name, cond, extra=""):
 
 def get_base_ip():
     return sm.get_local_ip()
+
+def start_test_server():
+    """Test için sunucu başlatır. Gerçek adaptör yoksa loopback'e düşer (CI uyumu)."""
+    adapters = sm._list_adapters()
+    if adapters:
+        _start = sm.start_phone_server
+        return _start(FakeMon())
+    sm.stop_phone_server()
+    sm.PhoneRequestHandler.provider = sm.PhoneMetricsProvider(FakeMon())
+    sm._pairing_code = sm.secrets.token_urlsafe(6)
+    sm._pairing_expiry = time.time() + sm.PHONE_PAIR_TTL
+    sm._phone_tls_active = False
+    sm._start_cleanup_thread()
+    srv = sm._PhoneHTTPServer(("127.0.0.1", sm.PHONE_SERVER_PORT), sm.PhoneRequestHandler)
+    sm._phone_server = srv
+    sm._phone_server_thread = threading.Thread(target=srv.serve_forever, daemon=True)
+    sm._phone_server_thread.start()
+    return True, "127.0.0.1", sm._pairing_code
 
 def http_req(method, path, host=None, body=None, headers=None, ip=None):
     """Düşük seviyeli HTTP isteği. Host/Origin kontrol edilebilir."""
@@ -37,7 +63,7 @@ def http_req(method, path, host=None, body=None, headers=None, ip=None):
 def get_cookie(headers_path=None):
     """Pairing kodu ile session cookie al. Her çağrıda temiz sunucu başlatır."""
     sm.stop_phone_server()
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     pair = sm._pairing_code
     status, data = http_req("POST", "/api/pair", body=json.dumps({"code": pair}))
     # Set-Cookie header'ına erişemiyoruz; doğrudan session store'dan doğrula
@@ -48,7 +74,7 @@ def get_cookie(headers_path=None):
 def get_cookie_raw():
     """Pairing ile session cookie header'ini raw dondurur."""
     sm.stop_phone_server()
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     pair = sm._pairing_code
     conn = http.client.HTTPConnection(get_base_ip(), 8080, timeout=5)
     conn.request("POST", "/api/pair", body=json.dumps({"code": pair}),
@@ -84,7 +110,7 @@ class FakeMon:
 
 def test_bind():
     print("[TEST] Güvenli adaptöre bind (0.0.0.0 değil)")
-    ok, ip, pair = sm.start_phone_server(FakeMon())
+    ok, ip, pair = start_test_server()
     check("sunucu acildi", ok, f"(ip={ip})")
     check("public/any bind yok", ip != "0.0.0.0", f"(ip={ip})")
     check("private LAN IP", ip.startswith(("10.", "192.168.", "172.")), f"(ip={ip})")
@@ -92,7 +118,7 @@ def test_bind():
 
 def test_token_yok_erişim():
     print("[TEST] Token/session olmadan erişim reddedilmeli")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     status, _ = http_req("GET", "/metrics")
     check("/metrics token'sız 403", status == 403, f"(got {status})")
     status, _ = http_req("GET", "/events")
@@ -101,14 +127,14 @@ def test_token_yok_erişim():
 
 def test_yanlis_token():
     print("[TEST] Yanlış pairing kodu")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     status, _ = http_req("POST", "/api/pair", body=json.dumps({"code": "YANLIS-KOD"}))
     check("yanlis kod 403", status == 403, f"(got {status})")
     sm.stop_phone_server()
 
 def test_suresi_dolmus_token():
     print("[TEST] Süresi dolmuş pairing kodu")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     sm._pairing_expiry = time.time() - 5
     status, _ = http_req("POST", "/api/pair", body=json.dumps({"code": sm._pairing_code}))
     check("suresi dolmus kod 403", status == 403, f"(got {status})")
@@ -116,7 +142,7 @@ def test_suresi_dolmus_token():
 
 def test_tek_kullanimlik_pair():
     print("[TEST] Pairing kodu tek kullanımlık")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     code = sm._pairing_code
     s1, _ = http_req("POST", "/api/pair", body=json.dumps({"code": code}))
     s2, _ = http_req("POST", "/api/pair", body=json.dumps({"code": code}))
@@ -126,7 +152,7 @@ def test_tek_kullanimlik_pair():
 
 def test_rate_limit():
     print("[TEST] IP başına rate limit")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     sm._rate_store.clear()
     got_429 = False
     for i in range(sm.PHONE_RATE_LIMIT_PER_MIN + 5):
@@ -139,7 +165,7 @@ def test_rate_limit():
 
 def test_100_concurrent():
     print("[TEST] 100 eş zamanlı bağlantı")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     status, _, sid = get_cookie()
     if status != 200:
         check("pairing onkosul", False)
@@ -164,7 +190,7 @@ def test_100_concurrent():
 
 def test_sse_disconnect():
     print("[TEST] SSE kopma ve sunucu kapanırken açık istemciler")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     status, _, sid = get_cookie()
     if status != 200:
         check("pairing onkosul", False)
@@ -196,7 +222,7 @@ def test_vpn_public_bind():
 
 def test_cors_host():
     print("[TEST] CORS ve Host doğrulaması")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     # Yanlış Host
     status, _ = http_req("GET", "/", host="evil.com:8080")
     check("kotu Host reddedildi", status == 403, f"(got {status})")
@@ -213,7 +239,7 @@ def test_cors_host():
 
 def test_fail_closed():
     print("[TEST] Auth fail-closed")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     sm._pairing_code = None
     status, _ = http_req("GET", "/metrics")
     check("token yoksa 403 (fail-closed)", status == 403, f"(got {status})")
@@ -248,7 +274,7 @@ def test_cors_basligi_yok():
 
 def test_max_client():
     print("[TEST] Max istemci sınırı")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     sm._PhoneHTTPServer.active_connections = 0
     # Yapay olarak limiti aş: process_request'a aynı anda çok istek
     limit = sm.PHONE_MAX_CONNECTIONS
@@ -259,7 +285,7 @@ def test_max_client():
 def test_pair_invalid_host_origin():
     print("[TEST] POST /api/pair Host ve Origin dogrulamasi")
     sm.stop_phone_server()
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     body = json.dumps({"code": sm._pairing_code})
     status, _ = http_req("POST", "/api/pair", host="evil.com:8080", body=body)
     check("POST kotu Host 403", status == 403, f"(got {status})")
@@ -272,7 +298,7 @@ def test_pair_invalid_host_origin():
 
 def test_body_limit():
     print("[TEST] Request body limiti")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     big = json.dumps({"code": "x" * (sm.PHONE_BODY_MAX + 100)})
     status, _ = http_req("POST", "/api/pair", body=big)
     check("buyuk body 413", status == 413, f"(got {status})")
@@ -292,7 +318,7 @@ def test_body_limit():
 
 def test_session_auth():
     print("[TEST] Session auth: yanlis/suresi dolmus/revoke")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     status, _, sid = get_cookie()
     check("pairing onkosul 200", status == 200)
     # Yanlış session
@@ -316,7 +342,7 @@ def test_session_auth():
 
 def test_pairing_replay():
     print("[TEST] Pairing replay ve rate limit")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     code = sm._pairing_code
     s1, _ = http_req("POST", "/api/pair", body=json.dumps({"code": code}))
     s2, _ = http_req("POST", "/api/pair", body=json.dumps({"code": code}))
@@ -326,7 +352,7 @@ def test_pairing_replay():
 def test_pairing_brute_force():
     print("[TEST] Pairing brute-force rate limiti (429)")
     sm.stop_phone_server()
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     with sm._rate_lock:
         sm._rate_store.clear()
     got_429 = False
@@ -344,7 +370,7 @@ def test_pairing_brute_force():
 
 def test_endpoint_rate_isolation():
     print("[TEST] Endpoint bazlı rate limit izolasyonu")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     status, _, sid = get_cookie()
     check("pairing onkosul 200", status == 200)
     with sm._rate_lock:
@@ -466,7 +492,7 @@ def test_net_speed():
 
 def test_sse_max_recovery():
     print("[TEST] SSE disconnect sonrasi client/connection temizligi")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     sm._PhoneHTTPServer.active_connections = 0
     status, _, sid = get_cookie()
     check("pairing onkosul 200", status == 200)
@@ -512,7 +538,7 @@ def test_tls_path_validation():
 
 def test_log_redaction():
     print("[TEST] Log'da secret redaction")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     pair = sm._pairing_code
     # Log'u yakala
     buf = io.StringIO()
@@ -529,7 +555,7 @@ def test_log_redaction():
 
 def test_host_variants():
     print("[TEST] Host IPv6/port varyasyonlari")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     ip = get_base_ip()
     # Doğru host:port
     status, _ = http_req("GET", "/")
@@ -550,7 +576,7 @@ def test_host_variants():
 
 def test_security_headers():
     print("[TEST] HTTP security headers")
-    sm.start_phone_server(FakeMon())
+    start_test_server()
     conn = http.client.HTTPConnection(get_base_ip(), 8080, timeout=5)
     conn.request("GET", "/", headers={"Host": f"{get_base_ip()}:8080"})
     r = conn.getresponse(); r.read()
