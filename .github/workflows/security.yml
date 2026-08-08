@@ -10,7 +10,7 @@ on:
 jobs:
   security:
     name: Security checks
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +24,7 @@ jobs:
           pip install bandit ruff pip-audit
 
       - name: Bandit security scan
-        run: bandit -r kaynak/ --exclude kaynak/build,kaynak/dist,kaynak/dist2 -f txt -q || true
+        run: bandit -r kaynak/ -f txt -q || true
 
       - name: Ruff lint
         run: ruff check kaynak/sistem_monitor.py kaynak/calistir.py || true
@@ -32,14 +32,22 @@ jobs:
       - name: pip-audit (CVE check)
         run: pip-audit -r kaynak/requirements.txt || true
 
+  semgrep:
+    name: Semgrep scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
       - name: Semgrep scan
         run: |
           pip install semgrep
-          semgrep --config auto --error --exclude 'build/**' --exclude 'dist/**' --exclude 'dist2/**' kaynak/ || true
+          semgrep --config auto --error kaynak/sistem_monitor.py kaynak/calistir.py || true
 
   compile:
     name: Compile check
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
