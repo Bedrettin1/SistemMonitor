@@ -51,3 +51,13 @@ jobs:
             kaynak/dist/sbom.cdx.json
             kaynak/sistem_monitor.py
           fail_on_unmatched_files: false
+
+      - name: Repo'daki SistemMonitor.exe'yi güncelle (commit)
+        shell: pwsh
+        run: |
+          Copy-Item kaynak/dist/SistemMonitor.exe -Destination SistemMonitor.exe -Force
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SistemMonitor.exe
+          git commit -m "build: ${{ github.ref_name }} exe (otomatik)" || echo "degisiklik yok"
+          git push origin HEAD:refs/heads/main
