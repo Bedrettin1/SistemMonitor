@@ -56,8 +56,8 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item kaynak/dist/SistemMonitor.exe -Destination SistemMonitor.exe -Force
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "Zee"
+          git config user.email "kacarbedo@gmail.com"
           git add SistemMonitor.exe
           git commit -m "build: ${{ github.ref_name }} exe (otomatik)" || echo "degisiklik yok"
           git fetch origin main
