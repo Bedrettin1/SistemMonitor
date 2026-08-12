@@ -45,6 +45,9 @@ foreach ($dir in @($base, $parent)) {
     Write-Host "Guncellendi: $(Join-Path $dir 'SistemMonitor.exe')  ($([math]::Round((Get-Item (Join-Path $dir 'SistemMonitor.exe')).Length/1MB,1)) MB)"
 }
 
-# 4) Yerel main'i origin/main ile hizala (exe commit'ini da al)
-git -C $base pull --ff-only origin main 2>&1 | Out-Null
-Write-Host "Tamamlandi. SistemMonitor.exe artik en guncel surumde."
+# 4) Yerel main'i origin/main ile hizala (exe commit'ini da al) - best-effort
+try { git -C $base pull --ff-only origin main 2>&1 | Out-Null } catch { Write-Host "Pull atlandi (zaten guncel veya yerel degisiklik var)." }
+
+# 5) Yeni exe'yi yonetici olarak baslat (CPU Package sicakligi icin gerekli)
+Start-Process -FilePath (Join-Path $base "SistemMonitor.exe") -Verb RunAs
+Write-Host "Tamamlandi. SistemMonitor.exe en guncel surumde ve yonetici olarak baslatildi (CPU Package sicakligi icin)."
