@@ -630,6 +630,15 @@ def test_cpu_temp_lhm():
     check("is_admin bool", isinstance(sm._is_admin(), bool))
 
 
+def test_cpu_temp_fallback():
+    print("[TEST] cpu sicaklik fallback (thermal zone, surucusuz)")
+    try:
+        v = sm._read_cpu_temp_fallback()
+        check("fallback hatasiz (None veya float)", v is None or isinstance(v, float), f"(v={v})")
+    except Exception as e:
+        check("fallback hatasiz", False, f"{type(e).__name__}: {e}")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("SISTEMMONITOR GUVENLIK TESTLERI")
@@ -648,6 +657,7 @@ if __name__ == "__main__":
         test_log_redaction, test_host_variants, test_security_headers,
         test_i18n,
         test_cpu_temp_lhm,
+        test_cpu_temp_fallback,
     ]
     for t in tests:
         try:
