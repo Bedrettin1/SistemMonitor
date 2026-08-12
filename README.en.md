@@ -201,7 +201,7 @@ calculation, TLS cookie/validation, log redaction and i18n/translation.
   automatically in CI; merges are blocked until tests pass.
 - 📜 **License:** This project is licensed under **CC BY-NC 4.0** — you may modify and
   share the code freely, but **commercial use (including resale) requires the author's
-  written permission**. For commercial use, request permission at **kacarbedo@gmail.com**.
+  written permission**. For commercial use, request permission at **kacarbedrettin1@gmail.com**.
 
 ## 🖥️ Requirements
 

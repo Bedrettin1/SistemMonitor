@@ -198,7 +198,7 @@ JSON normalizasyonu, ağ hızı hesabı, TLS cookie/validasyon, log redaction ve
   CI'da otomatik çalışır; testler geçmeden merge edilmez.
 - 📜 **Lisans:** Bu proje **CC BY-NC 4.0** ile lisanslanmıştır — kodu değiştirip paylaşmak
   serbesttir, ancak **ticari kullanım (satış dahil) yazarın yazılı iznine tabidir**.
-  Ticari kullanım için: **kacarbedo@gmail.com** adresinden izin isteyin.
+  Ticari kullanım için: **kacarbedrettin1@gmail.com** adresinden izin isteyin.
 
 ## 🖥️ Gereksinimler
 
