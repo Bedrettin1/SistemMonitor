@@ -617,6 +617,19 @@ def test_i18n():
     finally:
         sm.set_lang(orig)
 
+def test_cpu_temp_lhm():
+    print("[TEST] cpu sicaklik (LibreHardwareMonitor)")
+    check("LHM_AVAILABLE bool", isinstance(sm.LHM_AVAILABLE, bool))
+    dll = sm._find_lhm_dll()
+    check("LHM dll bulundu", dll is not None, f"(dll={dll})")
+    try:
+        v = sm._read_cpu_package_temp()
+        check("CPU Package okuma hatasiz (None veya float)", v is None or isinstance(v, float), f"(v={v})")
+    except Exception as e:
+        check("CPU Package okuma hatasiz", False, f"{type(e).__name__}: {e}")
+    check("is_admin bool", isinstance(sm._is_admin(), bool))
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("SISTEMMONITOR GUVENLIK TESTLERI")
@@ -634,6 +647,7 @@ if __name__ == "__main__":
         test_net_speed, test_sse_max_recovery, test_secure_cookie_tls, test_tls_path_validation,
         test_log_redaction, test_host_variants, test_security_headers,
         test_i18n,
+        test_cpu_temp_lhm,
     ]
     for t in tests:
         try:
