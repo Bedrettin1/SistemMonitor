@@ -1449,8 +1449,6 @@ class Monitor(QMainWindow):
         return getattr(self, '_ct_cache', None)
 
     def _ensure_ct_refresh(self):
-        if not LHM_AVAILABLE:
-            return
         now = time.time()
         if getattr(self, '_ct_running', False):
             return
@@ -1826,16 +1824,55 @@ def _read_cpu_package_temp():
     return None
 
 
-def _query_cpu_temp():
-    """LibreHardwareMonitor ile CPU Package sicakligi; gerekirse yonetici izni ister.
+def _read_cpu_temp_fallback():
+    """Surucu/admin gerektirmeyen ACPI thermal zone sicakligi (PDH uzerinden).
 
-    GUI thread disinda (worker) calistirilir, hata halinde None dondurur.
+    LHM surucu yuklenemediginde devreye girer; gercek bir deger dondurur.
+    WMI kullanmaz (Performans sayaci / Get-Counter).
     """
-    if not _is_admin():
+    try:
+        ps = (
+            "Get-Counter '\\Thermal Zone Information(*)\\Temperature' "
+            "-ErrorAction SilentlyContinue | Select-Object -ExpandProperty CounterSamples | "
+            "ForEach-Object { $_.CookedValue }"
+        )
+        out = subprocess.run(
+            [POWERSHELL_EXE, "-NoProfile", "-Command", ps],
+            capture_output=True, text=True, timeout=15,
+            creationflags=0x08000000,
+        )
+        vals = []
+        for tok in out.stdout.replace("\r", " ").replace("\n", " ").split():
+            try:
+                vals.append(float(tok))
+            except ValueError:
+                pass
+        if not vals:
+            return None
+        cs = []
+        for v in vals:
+            c = (v / 10.0 - 273.15) if v > 200 else v
+            if 0 < c < 120:
+                cs.append(c)
+        return max(cs) if cs else None
+    except Exception:
+        _safe_log("CT: thermal zone fallback basarisiz")
+        return None
+
+
+def _query_cpu_temp():
+    """ONCELIK: LHM ile CPU Package (admin + surucu gerekir).
+    Basarisizsa surucu/admin gerektirmeyen ACPI thermal zone fallback'i kullanilir.
+    """
+    v = None
+    if _is_admin():
+        v = _read_cpu_package_temp()
+    if v is None:
+        v = _read_cpu_temp_fallback()
+    if v is None and not _is_admin():
         if _request_admin():
             os._exit(0)
-        return None
-    return _read_cpu_package_temp()
+    return v
 
 _running_workers = set()
 _workers_lock = threading.Lock()
