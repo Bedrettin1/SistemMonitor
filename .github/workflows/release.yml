@@ -60,4 +60,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add SistemMonitor.exe
           git commit -m "build: ${{ github.ref_name }} exe (otomatik)" || echo "degisiklik yok"
+          git fetch origin main
+          git rebase origin/main
           git push origin HEAD:refs/heads/main
