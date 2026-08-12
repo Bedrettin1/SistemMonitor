@@ -1825,16 +1825,15 @@ def _read_cpu_package_temp():
 
 
 def _read_cpu_temp_fallback():
-    """Surucu/admin gerektirmeyen ACPI thermal zone sicakligi (PDH uzerinden).
+    """Ana CPU sicaklik kaynagi: WMI Win32_PerfFormattedData_Counters_ThermalZoneInformation.
 
-    LHM surucu yuklenemediginde devreye girer; gercek bir deger dondurur.
-    WMI kullanmaz (Performans sayaci / Get-Counter).
+    Temperature degeri KELVIN'dir; Santigrat = T - 273.15 (10'a bolunmez).
+    LHM surucusuz calismadigi icin bu kaynak ana kaynaktir. Hata olursa None doner.
     """
     try:
         ps = (
-            "Get-Counter '\\Thermal Zone Information(*)\\Temperature' "
-            "-ErrorAction SilentlyContinue | Select-Object -ExpandProperty CounterSamples | "
-            "ForEach-Object { $_.CookedValue }"
+            "Get-WmiObject -Class Win32_PerfFormattedData_Counters_ThermalZoneInformation "
+            "-ErrorAction SilentlyContinue | ForEach-Object { $_.Temperature }"
         )
         out = subprocess.run(
             [POWERSHELL_EXE, "-NoProfile", "-Command", ps],
@@ -1849,28 +1848,22 @@ def _read_cpu_temp_fallback():
                 pass
         if not vals:
             return None
-        cs = []
-        for v in vals:
-            c = (v / 10.0 - 273.15) if v > 200 else v
-            if 0 < c < 120:
-                cs.append(c)
-        return max(cs) if cs else None
+        cs = [v - 273.15 for v in vals if 0 < (v - 273.15) < 115]
+        return round(max(cs), 1) if cs else None
     except Exception:
-        _safe_log("CT: thermal zone fallback basarisiz")
+        _safe_log("CT: WMI thermal zone okunamadi")
         return None
 
 
 def _query_cpu_temp():
-    """ONCELIK: LHM ile CPU Package (admin + surucu gerekir).
-    Basarisizsa surucu/admin gerektirmeyen ACPI thermal zone fallback'i kullanilir.
+    """CPU sicakligi: oncelikle WMI ThermalZone (duzeltilmis Kelvin->Celsius).
+    Basarisizsa LibreHardwareMonitor CPU Package denenir (surucu/admin gerekir).
     """
-    v = None
-    if _is_admin():
-        v = _read_cpu_package_temp()
+    v = _read_cpu_temp_fallback()
     if v is None:
-        v = _read_cpu_temp_fallback()
-    if v is None and not _is_admin():
-        if _request_admin():
+        if _is_admin():
+            v = _read_cpu_package_temp()
+        elif _request_admin():
             os._exit(0)
     return v
 
