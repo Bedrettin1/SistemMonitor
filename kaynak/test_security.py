@@ -589,6 +589,34 @@ def test_security_headers():
     check("ACAO yok", "Access-Control-Allow-Origin" not in hdrs)
     sm.stop_phone_server()
 
+def test_i18n():
+    print("[TEST] i18n / dil destegi")
+    orig = sm.LANG
+    try:
+        sm.set_lang("en")
+        check("EN pencere adi", sm.tr("Sistem Monitoru") == "System Monitor", f"(={sm.tr('Sistem Monitoru')})")
+        check("EN kart adi", sm.tr("CPU Kullanim") == "CPU Usage", f"(={sm.tr('CPU Kullanim')})")
+        check("EN hata mesaji", sm.tr("Gecersiz host.") == "Invalid host.", f"(={sm.tr('Gecersiz host.')})")
+        check("EN _exp", sm._exp(41).startswith("Unexpected shutdown"), f"(={sm._exp(41)})")
+        html = sm._build_phone_html(tls_active=False)
+        check("EN html title", "System Monitor - Phone" in html)
+        check("EN html connecting", "Connecting..." in html)
+        check("EN html cpu", "CPU Usage" in html)
+        check("EN html tls warn", "unencrypted" in html)
+        html_tls = sm._build_phone_html(tls_active=True)
+        check("EN html tls warn yok", "unencrypted" not in html_tls and 'class="tls-warn"' not in html_tls)
+        sm.set_lang("tr")
+        check("TR pencere adi", sm.tr("Sistem Monitoru") == "Sistem Monitoru")
+        check("TR _exp", sm._exp(41).startswith("Beklenmeyen kapanma"))
+        html_tr = sm._build_phone_html()
+        check("TR html connecting", "Bağlanıyor..." in html_tr)
+        check("TR html cpu", "CPU Kullanım" in html_tr)
+        check("TR html tls warn", "sifresiz" in html_tr)
+        sm.set_lang("unknown")
+        check("Bilinmeyen dil TR fallback", sm.tr("Sistem Monitoru") == "Sistem Monitoru")
+    finally:
+        sm.set_lang(orig)
+
 if __name__ == "__main__":
     print("=" * 60)
     print("SISTEMMONITOR GUVENLIK TESTLERI")
@@ -605,6 +633,7 @@ if __name__ == "__main__":
         test_event_get_parse_error, test_event_get_success_empty, test_event_get_single_object,
         test_net_speed, test_sse_max_recovery, test_secure_cookie_tls, test_tls_path_validation,
         test_log_redaction, test_host_variants, test_security_headers,
+        test_i18n,
     ]
     for t in tests:
         try:
