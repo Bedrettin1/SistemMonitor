@@ -74,9 +74,9 @@ def _safe_log(msg):
 
 LANG = "tr"
 _TR_EN = {
-    "Sistem Monitoru": "System Monitor",
-    "Sistem Monitoru - Telefon": "System Monitor - Phone",
-    "Sistem Monitoru - Kisa Yollar": "System Monitor - Shortcuts",
+    "SistemMonitor": "SistemMonitor",
+    "SistemMonitor - Telefon": "SistemMonitor - Phone",
+    "SistemMonitor - Kisa Yollar": "SistemMonitor - Shortcuts",
     "Telefon Bağlantısı": "Phone Connection",
     "Telefonla Bağla (F2)": "Connect Phone (F2)",
     "Telefon Bağlantısı Aktif (F2)": "Phone Connection Active (F2)",
@@ -936,8 +936,8 @@ def _build_phone_html(tls_active=False):
     """PHONE_HTML'i güncel LANG ve TLS durumuna göre doldurur."""
     html = PHONE_HTML
     replacements = {
-        "@@TITLE@@": tr("Sistem Monitoru - Telefon"),
-        "@@APPNAME@@": tr("Sistem Monitoru"),
+        "@@TITLE@@": tr("SistemMonitor - Telefon"),
+        "@@APPNAME@@": tr("SistemMonitor"),
         "@@CONNECTING@@": tr("Bağlanıyor..."),
         "@@CONNECTED@@": tr("Bağlı"),
         "@@CONN_LOST@@": tr("Bağlantı koptu, yeniden deneniyor..."),
@@ -1160,7 +1160,7 @@ class Monitor(QMainWindow):
         self._cmp = False; self._wa = 200; self._sz = 0
         self._phone_active = False
         self._phone_dialog = None
-        self.setWindowTitle(tr("Sistem Monitoru"))
+        self.setWindowTitle(tr("SistemMonitor"))
         icon_path = os.path.join(getattr(sys, '_MEIPASS', os.path.dirname(__file__) if '__file__' in dir() else '.'), "icon.png")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
@@ -1170,7 +1170,7 @@ class Monitor(QMainWindow):
         self.ml = QVBoxLayout(cw); self.ml.setContentsMargins(8,6,8,6); self.ml.setSpacing(5)
 
         tb = QHBoxLayout(); tb.setSpacing(5)
-        self.hdr = QLabel(tr("Sistem Monitoru"))
+        self.hdr = QLabel(tr("SistemMonitor"))
         self.hdr.setStyleSheet("color:#cba6f7; font-size:13px; font-weight:bold; background:transparent;")
         tb.addWidget(self.hdr)
         self.chdr = QLabel("SM")
@@ -1293,7 +1293,7 @@ class Monitor(QMainWindow):
             self._tray.setIcon(QIcon(icon_path))
         else:
             self._tray.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
-        self._tray.setToolTip(tr("Sistem Monitoru"))
+        self._tray.setToolTip(tr("SistemMonitor"))
         
         self._tray_menu = QMenu()
         self._tray_show_action = QAction(tr("Göster"), self)
@@ -1351,7 +1351,7 @@ class Monitor(QMainWindow):
         if self._phone_active:
             e.ignore()
             self.hide()
-            self._tray.showMessage(tr("Sistem Monitoru"), tr("Uygulama arka planda çalışıyor. Telefon bağlantısı aktif."), QSystemTrayIcon.MessageIcon.Information, 3000)
+            self._tray.showMessage(tr("SistemMonitor"), tr("Uygulama arka planda çalışıyor. Telefon bağlantısı aktif."), QSystemTrayIcon.MessageIcon.Information, 3000)
         else:
             stop_phone_server()
             self._tray.hide()
@@ -1377,8 +1377,8 @@ class Monitor(QMainWindow):
 
     def _retranslate(self):
         try:
-            self.setWindowTitle(tr("Sistem Monitoru"))
-            self.hdr.setText(tr("Sistem Monitoru"))
+            self.setWindowTitle(tr("SistemMonitor"))
+            self.hdr.setText(tr("SistemMonitor"))
             for i, cd in enumerate(self._cards):
                 if i < len(self._card_keys):
                     cd.t.setText(tr(self._card_keys[i]))
@@ -1386,7 +1386,7 @@ class Monitor(QMainWindow):
             self._help_btn.setToolTip(tr("Kısayollar (F1)"))
             self._lang_btn.setText("TR" if LANG == "tr" else "EN")
             self._lang_btn.setToolTip(tr("Dil"))
-            self._tray.setToolTip(tr("Sistem Monitoru"))
+            self._tray.setToolTip(tr("SistemMonitor"))
             self._tray_show_action.setText(tr("Göster"))
             self._tray_help_action.setText(tr("Kısayollar"))
             self._tray_quit_action.setText(tr("Çıkış"))
@@ -1414,7 +1414,7 @@ class Monitor(QMainWindow):
             result_code = self._phone_dialog.exec()
             if result_code == 1:
                 self.hide()
-                self._tray.showMessage(tr("Sistem Monitoru"), tr("Telefon bağlantısı aktif: {url}", url=url), QSystemTrayIcon.MessageIcon.Information, 3000)
+                self._tray.showMessage(tr("SistemMonitor"), tr("Telefon bağlantısı aktif: {url}", url=url), QSystemTrayIcon.MessageIcon.Information, 3000)
             elif result_code == 2:
                 self._stop_phone()
         else:
@@ -2041,7 +2041,7 @@ class EventLogDialog(QDialog):
 class WelcomeDialog(QDialog):
     def __init__(self, first_run=False):
         super().__init__()
-        self.setWindowTitle(tr("Sistem Monitoru - Kisa Yollar"))
+        self.setWindowTitle(tr("SistemMonitor - Kisa Yollar"))
         self.setFixedSize(380, 360)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         if first_run:
@@ -2057,7 +2057,7 @@ class WelcomeDialog(QDialog):
         """)
         lo = QVBoxLayout(self); lo.setContentsMargins(20,16,20,16); lo.setSpacing(6)
 
-        t = QLabel("<b>" + tr("Sistem Monitoru - Kisa Yollar") + "</b>")
+        t = QLabel("<b>" + tr("SistemMonitor - Kisa Yollar") + "</b>")
         t.setStyleSheet("color:#cba6f7; font-size:13px; background:transparent;")
         t.setAlignment(Qt.AlignCenter)
         lo.addWidget(t)
