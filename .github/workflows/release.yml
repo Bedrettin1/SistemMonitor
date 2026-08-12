@@ -25,7 +25,7 @@ jobs:
 
       - name: Build EXE
         run: |
-          pyinstaller --onefile --windowed --icon=icon.ico --name "SistemMonitor" --add-data "icon.png;." --hidden-import=png --hidden-import=PIL.PngImagePlugin sistem_monitor.py --distpath dist
+          pyinstaller --onefile --windowed --icon=icon.ico --name "SistemMonitor" --add-data "icon.png;." --add-data "lhmlibs;lhmlibs" --hidden-import=png --hidden-import=PIL.PngImagePlugin --hidden-import=clr --hidden-import=pythonnet sistem_monitor.py --distpath dist
         working-directory: kaynak
 
       - name: Compute SHA-256

@@ -1,4 +1,4 @@
-import sys, os, psutil, time, warnings, subprocess, json, socket, ssl, threading, re, http.server, urllib.parse, io, secrets, logging
+import sys, os, ctypes, shutil, tempfile, psutil, time, warnings, subprocess, json, socket, ssl, threading, re, http.server, urllib.parse, io, secrets, logging
 from datetime import datetime, timedelta
 
 try:
@@ -13,10 +13,10 @@ except ImportError:
     raise SystemExit("PySide6 gerekli")
 
 try:
-    import wmi
-    WMI = True
+    import clr  # pythonnet (LibreHardwareMonitor icin)
+    LHM_AVAILABLE = True
 except Exception:
-    WMI = False
+    LHM_AVAILABLE = False
 
 try:
     import qrcode
@@ -1445,11 +1445,11 @@ class Monitor(QMainWindow):
             return None
 
     def _ct(self):
-        # WMI termal sorgusu GUI thread'i bloklamamasi icin worker'dan doldurulan cache
+        # LHM CPU Package sorgusu GUI thread'i bloklamamasi icin worker'dan doldurulan cache
         return getattr(self, '_ct_cache', None)
 
     def _ensure_ct_refresh(self):
-        if not WMI:
+        if not LHM_AVAILABLE:
             return
         now = time.time()
         if getattr(self, '_ct_running', False):
@@ -1741,20 +1741,101 @@ def _query_event_count():
         _safe_log(f"EVENT: sayim hatasi: {e}")
         return (None, None)
 
-def _query_cpu_temp():
-    """WMI termal sorgusu; GUI thread disinda calistirilir. Hata halinde None."""
-    if not WMI:
+def _find_lhm_dll():
+    """LibreHardwareMonitorLib.dll'i bulur (lhmlibs, kaynak dizini, dondurulmus exe, cwd)."""
+    candidates = []
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates.append(os.path.join(here, "lhmlibs", "LibreHardwareMonitorLib.dll"))
+    candidates.append(os.path.join(here, "LibreHardwareMonitorLib.dll"))
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(os.path.join(meipass, "lhmlibs", "LibreHardwareMonitorLib.dll"))
+        candidates.append(os.path.join(meipass, "LibreHardwareMonitorLib.dll"))
+    candidates.append(os.path.join(os.getcwd(), "LibreHardwareMonitorLib.dll"))
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    return None
+
+
+def _is_admin():
+    """Surec yonetici (Administrator) olarak mi calisiyor?"""
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+_ADMIN_RELAUNCHED = False
+
+
+def _request_admin():
+    """Uygulamayi yonetici olarak yeniden baslatir (runas). Basariliysa True dondurur.
+
+    Onefile (PyInstaller) build'de sys.executable gecici klasore isaret eder ve
+    cikista silinir; bu yuzden exe'yi kalismasi gereken sabit bir konuma kopyalar.
+    """
+    global _ADMIN_RELAUNCHED
+    if _ADMIN_RELAUNCHED:
+        return False
+    _ADMIN_RELAUNCHED = True
+    try:
+        exe = sys.executable
+        if getattr(sys, "frozen", False):
+            stable = os.path.join(tempfile.gettempdir(), "SistemMonitor_elevated.exe")
+            try:
+                shutil.copyfile(exe, stable)
+            except Exception:
+                stable = exe
+            exe = stable
+        params = " ".join('"%s"' % a for a in sys.argv[1:])
+        ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, None, 1)
+        return ret > 32
+    except Exception:
+        return False
+
+
+def _read_cpu_package_temp():
+    """LibreHardwareMonitor uzerinden CPU Package sicakligini okur (admin gerekebilir)."""
+    if not LHM_AVAILABLE:
+        return None
+    dll = _find_lhm_dll()
+    if dll is None:
+        _safe_log("CT: LibreHardwareMonitorLib.dll bulunamadi")
         return None
     try:
-        import wmi as _w
-        t = _w.WMI(namespace="root\\CIMv2").Win32_PerfFormattedData_Counters_ThermalZoneInformation()
-        if t:
-            v = int(t[0].Temperature) / 10
-            return v if 0 < v < 120 else None
+        import clr
+        clr.AddReference(dll)
+        from LibreHardwareMonitor.Hardware import Computer, HardwareType, SensorType
+        comp = Computer()
+        comp.IsCpuEnabled = True
+        comp.Open()
+        try:
+            for hw in comp.Hardware:
+                if hw.HardwareType == HardwareType.Cpu:
+                    hw.Update()
+                    for s in hw.Sensors:
+                        if s.SensorType == SensorType.Temperature and s.Name == "CPU Package":
+                            v = s.Value
+                            if v is not None:
+                                return float(v)
+        finally:
+            comp.Close()
     except Exception:
-        _safe_log("CT: WMI termal sorgusu basarisiz")
-        return None
+        _safe_log("CT: LHM CPU Package okunamadi")
     return None
+
+
+def _query_cpu_temp():
+    """LibreHardwareMonitor ile CPU Package sicakligi; gerekirse yonetici izni ister.
+
+    GUI thread disinda (worker) calistirilir, hata halinde None dondurur.
+    """
+    if not _is_admin():
+        if _request_admin():
+            os._exit(0)
+        return None
+    return _read_cpu_package_temp()
 
 _running_workers = set()
 _workers_lock = threading.Lock()
