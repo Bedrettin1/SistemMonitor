@@ -1452,7 +1452,7 @@ class Monitor(QMainWindow):
         now = time.time()
         if getattr(self, '_ct_running', False):
             return
-        if now - getattr(self, '_ct_last', 0.0) < 30:
+        if now - getattr(self, '_ct_last', 0.0) < 5:
             return
         self._ct_last = now
         self._ct_running = True
@@ -1860,11 +1860,8 @@ def _query_cpu_temp():
     Basarisizsa LibreHardwareMonitor CPU Package denenir (surucu/admin gerekir).
     """
     v = _read_cpu_temp_fallback()
-    if v is None:
-        if _is_admin():
-            v = _read_cpu_package_temp()
-        elif _request_admin():
-            os._exit(0)
+    if v is None and _is_admin():
+        v = _read_cpu_package_temp()
     return v
 
 _running_workers = set()
