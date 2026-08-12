@@ -13,19 +13,57 @@
   <a href="README.en.md">English</a> · Türkçe
 </p>
 
+<p align="center">
+  <img src="https://github.com/Bedrettin1/SistemMonitor/actions/workflows/release.yml/badge.svg" alt="Release Build">
+  <img src="https://img.shields.io/github/v/release/Bedrettin1/SistemMonitor?label=release&color=blue" alt="Latest Release">
+  <img src="https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white" alt="Windows">
+  <img src="https://img.shields.io/github/downloads/Bedrettin1/SistemMonitor/total" alt="Downloads">
+  <img src="https://img.shields.io/github/license/Bedrettin1/SistemMonitor" alt="License">
+</p>
+
+---
+
+## 📑 İçindekiler
+
+- [✨ Özellikler](#özellikler)
+- [📸 Ekran Görüntüleri](#ekran-görüntüleri)
+- [📱 Telefonla Bağlanma](#telefonla-bağlanma)
+- [🔒 Güvenlik](#güvenlik)
+- [🖥️ Kurulum](#kurulum)
+- [🎮 Kısayollar](#kısayollar)
+- [🌐 Dil Değiştirme](#dil-değiştirme)
+- [🧰 Teknoloji Yığını](#teknoloji-yığını)
+- [🗺️ Yol Haritası](#yol-haritası)
+- [❓ SSS](#sss)
+- [🧪 Testler](#testler)
+- [🔍 Sürekli Güvenlik (GitHub Actions)](#sürekli-güvenlik-github-actions)
+- [🤝 Katkı & Destek](#katkı-destek)
+- [🖥️ Gereksinimler](#gereksinimler)
+
 ---
 
 ## ✨ Özellikler
 
-- **Gerçek zamanlı CPU kullanımı** ve sıcaklık takibi
-- **Gerçek zamanlı GPU kullanımı** ve sıcaklık takibi (NVIDIA)
-- **RAM** kullanım izleme
-- **Disk** kullanım izleme
-- **Ağ** hız izleme (indirme / yükleme)
-- **Windows hata kayıtları** görüntüleyici (son 48 saat)
-- **📱 Telefonla uzaktan izleme** - QR kod ile (aynı Wi-Fi / LAN ağı üzerinde çalışır)
-- **Sistem tepsisi** desteği - arka planda çalışmaya devam eder
+- **⚡ Gerçek zamanlı CPU kullanımı** ve sıcaklık takibi (~5 sn yenileme)
+- **🎮 Gerçek zamanlı GPU kullanımı** ve sıcaklık takibi (NVIDIA)
+- **🧠 RAM** kullanım izleme
+- **💾 Disk** kullanım izleme
+- **🌐 Ağ** hız izleme (indirme / yükleme)
+- **📋 Windows hata kayıtları** görüntüleyici (son 48 saat)
+- **📱 Telefonla uzaktan izleme** — QR kod ile (aynı Wi-Fi / LAN ağı üzerinde)
+- **🖥️ Sistem tepsisi** desteği — arka planda çalışmaya devam eder
 - **🌐 Türkçe / İngilizce** dil desteği (anlık geçiş)
+
+## 📸 Ekran Görüntüleri
+
+| Ana Pencere | Telefon Bağlantısı (QR) |
+|-------------|--------------------------|
+| <img src="assets/screenshot-main.png" width="480" alt="Ana Pencere"> | <img src="assets/screenshot-phone.png" width="260" alt="Telefon Bağlantısı"> |
+
+> Sistem tepsisi bağlam menüsü:
+>
+> <img src="assets/screenshot-tray.png" width="200" alt="Tray Menü">
 
 ## 📱 Telefonla Bağlanma
 
@@ -98,6 +136,43 @@ python kaynak/sistem_monitor.py
 
 Arayüz ve telefon sayfası anında güncellenir; tercih kaydedilir.
 
+## 🧰 Teknoloji Yığını
+
+| Teknoloji | Kullanım |
+|-----------|----------|
+| **PySide6** (Qt6) | Masaüstü GUI |
+| **PyInstaller** | Tek dosya EXE build |
+| **psutil** | CPU / RAM / disk / ağ ölçümü |
+| **pynvml** | NVIDIA GPU sıcaklık & kullanım |
+| **pythonnet + LibreHardwareMonitorLib** | Donanım sensörleri (opsiyonel sürücü ile) |
+| **qrcode** | Telefon eşleştirme QR kodu |
+| **Pillow** | Görsel işleme |
+
+## 🗺️ Yol Haritası
+
+- 🔧 Daha fazla GPU vendörü desteği (AMD, Intel)
+- 🌡️ CPU sıcaklık kaynağı sağlamlaştırma (LHM sürücüsü mevcutsa öncelik)
+- 🎨 Açık / koyu tema seçenekleri
+- 🧩 Özelleştirilebilir kart düzeni
+- 📦 Taşınabilir (portable) yapılandırma dosyası
+
+## ❓ SSS
+
+**❔ EXE neden bu kadar büyük (~60 MB)?**
+> PyInstaller tek dosya build'i tüm Python çalışma ortamını (PySide6, LHM kütüphaneleri) exe'nin içine gömer; bu yüzden boyut yüksektir ama kurulum gerektirmez.
+
+**❔ Telefon bağlantısı neden sadece yerel ağda (LAN/Wi-Fi) çalışıyor?**
+> Güvenlik gereği public, VPN ve sanal ağlara sunucu açılmaz; sunucu yalnızca private adaptörlere bağlanır.
+
+**❔ CPU sıcaklığını neden WMI ile okuyor?**
+> Bu makinede LibreHardwareMonitor için kernel sürücüsü mevcut değilse WMI `ThermalZoneInformation` ana kaynaktır (Kelvin → Santigrat dönüşümü ile). Sürücü mevcutsa LHM CPU Package kullanılır.
+
+**❔ Python yüklü olmalı mıyım?**
+> Hayır. Release EXE tek başına çalışır; Python yalnızca kaynaktan çalıştırmada gerekir.
+
+**❔ Antivirüs uyarı veriyor mu?**
+> Tek dosya build'i bazı antivirüslerde yanlış pozitif tetikleyebilir. Kaynak kod açıktır; isterseniz kendiniz build edebilirsiniz.
+
 ## 🧪 Testler
 
 ```powershell
@@ -114,6 +189,13 @@ JSON normalizasyonu, ağ hızı hesabı, TLS cookie/validasyon, log redaction ve
 - `security.yml`: Bandit, Ruff, pip-audit (CVE) ve Semgrep taramaları + **security/regression testleri**
   her push/PR'de çalışır (test hatası pipeline'ı durdurur).
 - `release.yml`: `v*` tag'lerinde otomatik build alır; EXE, kaynak, SHA-256 ve SBOM'u release'e yükler.
+
+## 🤝 Katkı & Destek
+
+- ⭐ Beğendiyseniz repo'ya **yıldız verin** — motive eder!
+- 🐞 Hata veya öneri için **[Issues](/Bedrettin1/SistemMonitor/issues)** açın.
+- 🔀 Katkı için: fork → özellik dalı (`git checkout -b ozellik`) → PR. Güvenlik testleri
+  CI'da otomatik çalışır; testler geçmeden merge edilmez.
 
 ## 🖥️ Gereksinimler
 
