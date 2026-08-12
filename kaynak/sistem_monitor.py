@@ -72,6 +72,123 @@ def _safe_log(msg):
     except Exception:
         pass
 
+LANG = "tr"
+_TR_EN = {
+    "Sistem Monitoru": "System Monitor",
+    "Sistem Monitoru - Telefon": "System Monitor - Phone",
+    "Sistem Monitoru - Kisa Yollar": "System Monitor - Shortcuts",
+    "Telefon Bağlantısı": "Phone Connection",
+    "Telefonla Bağla (F2)": "Connect Phone (F2)",
+    "Telefon Bağlantısı Aktif (F2)": "Phone Connection Active (F2)",
+    "Kısayollar (F1)": "Shortcuts (F1)",
+    "Kısayollar": "Shortcuts",
+    "Göster": "Show",
+    "Çıkış": "Exit",
+    "Telefon Bağlantısı: Kapalı": "Phone Connection: Off",
+    "Telefon Bağlantısı: Açık": "Phone Connection: On",
+    "CPU Kullanim": "CPU Usage",
+    "CPU Sicaklik": "CPU Temp",
+    "GPU Kullanim": "GPU Usage",
+    "GPU Sicaklik": "GPU Temp",
+    "RAM": "RAM",
+    "Disk": "Disk",
+    "Ag": "Network",
+    "Aktif Sure": "Uptime",
+    "Windows Hata (tikla ac)": "Windows Errors (click)",
+    "Kontrol edilemedi": "Could not check",
+    "Sistem Temiz ✓": "System Clean ✓",
+    "{n} Kritik Hata": "{n} Critical Error",
+    "Kritik Hata": "Critical Error",
+    "Hata": "Error",
+    "Telefon sunucusu başlatılamadı:\n{msg}": "Could not start phone server:\n{msg}",
+    "Uygulama arka planda çalışıyor. Telefon bağlantısı aktif.": "App running in background. Phone connection is active.",
+    "Telefon bağlantısı aktif: {url}": "Phone connection active: {url}",
+    "Güvenli yerel ağ adaptörü bulunamadı (VPN/sanal/public ağlar desteklenmez).": "No secure local network adapter found (VPN/virtual/public networks not supported).",
+    "Telefon sunucusu başlatılamadı: {e}": "Could not start phone server: {e}",
+    "<b>Telefonla Bağlantı Aktif</b>": "<b>Phone Connection Active</b>",
+    "QR kodu telefonla tarayın": "Scan the QR code with your phone",
+    "QR kod için: pip install qrcode[pil]": "For QR code: pip install qrcode[pil]",
+    "Bağlantı kodu 60 saniye geçerli ve tek kullanımlıktır. Kod kullanıldıktan sonra oturum çereziyle erişim sağlanır.": "The connection code is valid for 60 seconds and single-use. After the code is used, access is granted via the session cookie.",
+    "⚠ Yalnızca bu yerel ağ IP adresine bağlanılabilir.\nVPN, sanal veya public ağlarda sunucu açılmaz.": "⚠ Can only be reached via this local network IP address.\nThe server will not start on VPN, virtual or public networks.",
+    "🔒 HTTPS (TLS) aktif. Trafik şifreleniyor.": "🔒 HTTPS (TLS) active. Traffic is encrypted.",
+    "⚠ HTTP modunda trafik şifreli değildir.\nSertifika/private key verilirse HTTPS kullanılabilir.": "⚠ Traffic is not encrypted in HTTP mode.\nHTTPS can be used if a certificate/private key is provided.",
+    "Uygulama arka planda çalışmaya devam edecek.\nTelefondan değerleri görüntüleyebilirsiniz.": "The app will keep running in the background.\nYou can view the values from your phone.",
+    "Bağlantı süresi: {left} sn": "Connection time: {left} s",
+    "Bağlantı kodu süresi doldu": "Connection code expired",
+    "Simgeye Küçült": "Minimize to Tray",
+    "Bağlantıyı Kes": "Disconnect",
+    "Windows Hata Kayitlari": "Windows Error Logs",
+    "<b>Son 48 Saatteki Sistem Hatalari</b>": "<b>System Errors in the Last 48 Hours</b>",
+    "Hatalar kontrol ediliyor...": "Checking errors...",
+    "Windows olay kayıtları kontrol edilemedi.": "Windows event logs could not be checked.",
+    "Belirtilen zaman aralığında olay kaydı bulunamadı.": "No event records found in the specified time period.",
+    "Beklenmeyen hata": "Unexpected error",
+    "Kapat": "Close",
+    "Bir daha gosterme": "Don't show again",
+    "<b>F1</b>  - Bu kısayolları göster": "<b>F1</b>  - Show these shortcuts",
+    "<b>F2</b>  - Telefon bağlantısını aç/kapat": "<b>F2</b>  - Toggle phone connection",
+    "<b>F4</b>  - Gizli simgelere kucult / geri getir": "<b>F4</b>  - Minimize to / restore from tray",
+    "<b>Esc</b> - Overlay modundan gizli simgelere kucult": "<b>Esc</b> - Minimize from overlay mode to tray",
+    "<b>Ctrl+B</b> - Pencereyi buyut": "<b>Ctrl+B</b> - Enlarge window",
+    "<b>Ctrl+S</b> - Pencereyi kucult": "<b>Ctrl+S</b> - Shrink window",
+    "<b>F5</b>  - Verileri yenile": "<b>F5</b>  - Refresh data",
+    "<i>Slider: Saydamlik ayari (solda seffaf, sagda opak)</i>": "<i>Slider: Opacity (left transparent, right opaque)</i>",
+    "<i>+ / - : Pencere boyutu (tiklanabilir)</i>": "<i>+ / - : Window size (clickable)</i>",
+    "Gecersiz host.": "Invalid host.",
+    "Gecersiz origin.": "Invalid origin.",
+    "Yetkisiz erisim.": "Unauthorized access.",
+    "Bulunamadi.": "Not found.",
+    "Cok fazla istek.": "Too many requests.",
+    "Istek cok buyuk.": "Request too large.",
+    "Gecersiz istek.": "Invalid request.",
+    "Gecersiz veya suresi dolmus baglanti kodu.": "Invalid or expired connection code.",
+    "Gecersiz oturum.": "Invalid session.",
+    "TLS: sertifika ve private key birlikte verilmelidir.": "TLS: certificate and private key must be provided together.",
+    "TLS: sertifika dosyasi bulunamadi: {cert}": "TLS: certificate file not found: {cert}",
+    "TLS: private key dosyasi bulunamadi: {key}": "TLS: private key file not found: {key}",
+    "Zaman aşımı": "Timeout",
+    "PowerShell çalıştırılamadı": "PowerShell could not be run",
+    "PowerShell hata kodu {rc}": "PowerShell error code {rc}",
+    "JSON ayrıştırma hatası": "JSON parse error",
+    "Bilinmeyen hata kodu.": "Unknown error code.",
+    "Hata kodu {eid}. Windows olay goruntuleyiciden detayli inceleyin.": "Error code {eid}. Check Event Viewer for details.",
+    "Bağlanıyor...": "Connecting...",
+    "Bağlı": "Connected",
+    "Bağlantı koptu, yeniden deneniyor...": "Connection lost, retrying...",
+    "Oturum süresi doldu": "Session expired",
+    "Hata, yeniden deneniyor...": "Error, retrying...",
+    "Bağlantı kodu hatalı": "Invalid connection code",
+    "Bağlantı hatası": "Connection error",
+    "CPU Kullanım": "CPU Usage",
+    "CPU Sıcaklık": "CPU Temp",
+    "GPU Kullanım": "GPU Usage",
+    "GPU Sıcaklık": "GPU Temp",
+    "Ağ": "Network",
+    "Aktif Süre": "Uptime",
+    "Sistem Hataları": "System Errors",
+    "Son güncelleme:": "Last update:",
+    "Trafik sifresiz (HTTP). Guvenli baglanti icin TLS yapilandirin.": "Traffic is unencrypted (HTTP). Configure TLS for a secure connection.",
+    "-- Hata": "-- Errors",
+    "Dil": "Language",
+    "Türkçe": "Türkçe",
+    "İngilizce": "English",
+}
+
+def tr(s, **fmt):
+    """Geçerli LANG'a göre çeviri döndürür. Türkçe literal anahtar ve fallback'tir."""
+    out = _TR_EN.get(s, s) if LANG == "en" else s
+    if fmt:
+        try:
+            out = out.format(**fmt)
+        except (KeyError, IndexError):
+            pass
+    return out
+
+def set_lang(lang):
+    """Uygulama dilini değiştirir (kaydetmeden, sadece global)."""
+    global LANG
+    LANG = "en" if lang == "en" else "tr"
+
 class PhoneMetricsProvider:
     def __init__(self, monitor):
         self.monitor = monitor
@@ -187,11 +304,11 @@ def _validate_tls_paths(cert, key):
     if not cert and not key:
         return True, None, "http"
     if not cert or not key:
-        return False, "TLS: sertifika ve private key birlikte verilmelidir.", "http"
+        return False, tr("TLS: sertifika ve private key birlikte verilmelidir."), "http"
     if not os.path.isfile(cert):
-        return False, f"TLS: sertifika dosyasi bulunamadi: {cert}", "http"
+        return False, tr("TLS: sertifika dosyasi bulunamadi: {cert}", cert=cert), "http"
     if not os.path.isfile(key):
-        return False, f"TLS: private key dosyasi bulunamadi: {key}", "http"
+        return False, tr("TLS: private key dosyasi bulunamadi: {key}", key=key), "http"
     return True, None, "https"
 
 def _create_tls_context(cert, key):
@@ -319,11 +436,11 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
         """Host/Origin dogrulamasini tek noktada uygular. Gecersizse 403 doner, False dondurur."""
         if not self._host_ok():
             _safe_log(f"HTTP: gecersiz Host header {self.headers.get('Host')!r}")
-            self._deny(403, "Gecersiz host.")
+            self._deny(403, tr("Gecersiz host."))
             return False
         if not self._origin_ok():
             _safe_log(f"HTTP: izin verilmeyen Origin {self.headers.get('Origin')!r}")
-            self._deny(403, "Gecersiz origin.")
+            self._deny(403, tr("Gecersiz origin."))
             return False
         return True
 
@@ -342,7 +459,7 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
-        body = (msg or "Yetkisiz erisim.").encode("utf-8")
+        body = (msg or tr("Yetkisiz erisim.")).encode("utf-8")
         self.wfile.write(body)
 
     def _read_body(self):
@@ -394,7 +511,7 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path != "/api/pair":
-            self._deny(404, "Bulunamadi.")
+            self._deny(404, tr("Bulunamadi."))
             return
         if not self._request_valid():
             return
@@ -405,16 +522,16 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
         ip = self._client_ip()
         if _rate_limited(ip, "pairing"):
             _safe_log("PAIR: rate limit asildi")
-            self._deny(429, "Cok fazla istek.")
+            self._deny(429, tr("Cok fazla istek."))
             return
         body, err = self._read_body()
         if err == 413:
             _safe_log("PAIR: body limit asildi")
-            self._deny(413, "Istek cok buyuk.")
+            self._deny(413, tr("Istek cok buyuk."))
             return
         if err == 400 or body is None:
             _safe_log("PAIR: gecersiz Content-Length")
-            self._deny(400, "Gecersiz istek.")
+            self._deny(400, tr("Gecersiz istek."))
             return
         try:
             data = json.loads(body.decode("utf-8", "replace") or "{}")
@@ -423,7 +540,7 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
             code = str(data.get("code", ""))
         except (ValueError, AttributeError):
             _safe_log("PAIR: JSON cozulemedi")
-            self._deny(400, "Gecersiz istek.")
+            self._deny(400, tr("Gecersiz istek."))
             return
         with _pairing_lock:
             ok = (_pairing_code is not None
@@ -432,7 +549,7 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
                   and time.time() <= _pairing_expiry)
             if not ok:
                 _safe_log("PAIR: gecersiz/suresi dolmus/tekrar kullanilan kod reddedildi")
-                self._deny(403, "Gecersiz veya suresi dolmus baglanti kodu.")
+                self._deny(403, tr("Gecersiz veya suresi dolmus baglanti kodu."))
                 return
             _pairing_code = None
             _pairing_expiry = 0.0
@@ -452,7 +569,7 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
             return
         if parsed.path == "/":
             if _rate_limited(ip, "page"):
-                self._deny(429, "Cok fazla istek.")
+                self._deny(429, tr("Cok fazla istek."))
                 return
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -462,19 +579,17 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
                                  "default-src 'none'; connect-src 'self'; script-src 'unsafe-inline'; "
                                  "style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'")
             self.end_headers()
-            html = PHONE_HTML.replace("<!--PHONE_TLS_WARN-->",
-                                      "" if self._server_tls() else
-                                      '<div class="tls-warn">Trafik sifresiz (HTTP). Guvenli baglanti icin TLS yapilandirin.</div>')
+            html = _build_phone_html(self._server_tls())
             self.wfile.write(html.encode("utf-8"))
             return
         sid = self._session_from_cookie()
         if not _valid_session(sid):
             _safe_log(f"GET: oturum yok/gecersiz -> 403 {parsed.path}")
-            self._deny(403, "Gecersiz oturum.")
+            self._deny(403, tr("Gecersiz oturum."))
             return
         bucket = "metrics" if parsed.path == "/metrics" else "events" if parsed.path == "/events" else "page"
         if _rate_limited(ip, bucket):
-            self._deny(429, "Cok fazla istek.")
+            self._deny(429, tr("Cok fazla istek."))
             return
         if parsed.path == "/metrics":
             self.send_response(200)
@@ -518,7 +633,7 @@ class PhoneRequestHandler(http.server.BaseHTTPRequestHandler):
                     if self in self.clients:
                         self.clients.remove(self)
         else:
-            self._deny(404, "Bulunamadi.")
+            self._deny(404, tr("Bulunamadi."))
 
 PHONE_HTML = """
 <!DOCTYPE html>
@@ -526,7 +641,7 @@ PHONE_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Sistem Monitoru - Telefon</title>
+    <title>@@TITLE@@</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #cdd6f4; min-height: 100vh; padding: 16px; }
@@ -565,32 +680,32 @@ PHONE_HTML = """
     <div class="container">
         <!--PHONE_TLS_WARN-->
         <div class="header">
-            <div class="title">Sistem Monitoru</div>
-            <div class="status" id="status">Bağlanıyor...</div>
+            <div class="title">@@APPNAME@@</div>
+            <div class="status" id="status">@@CONNECTING@@</div>
         </div>
         <div class="grid">
             <div class="card">
-                <div class="card-title">CPU Kullanım</div>
+                <div class="card-title">@@CPU_USE@@</div>
                 <div class="card-value" id="cpu-val">--%</div>
                 <div class="bar"><div class="bar-fill" id="cpu-bar" style="width: 0%; background: #a6e3a1;"></div></div>
             </div>
             <div class="card">
-                <div class="card-title">CPU Sıcaklık</div>
+                <div class="card-title">@@CPU_TEMP@@</div>
                 <div class="card-value temp-normal" id="cpu-temp">--°C</div>
                 <div class="bar"><div class="bar-fill" id="cpu-temp-bar" style="width: 0%;"></div></div>
             </div>
             <div class="card">
-                <div class="card-title">GPU Kullanım</div>
+                <div class="card-title">@@GPU_USE@@</div>
                 <div class="card-value" id="gpu-val">--%</div>
                 <div class="bar"><div class="bar-fill" id="gpu-bar" style="width: 0%; background: #cba6f7;"></div></div>
             </div>
             <div class="card">
-                <div class="card-title">GPU Sıcaklık</div>
+                <div class="card-title">@@GPU_TEMP@@</div>
                 <div class="card-value temp-normal" id="gpu-temp">--°C</div>
                 <div class="bar"><div class="bar-fill" id="gpu-temp-bar" style="width: 0%;"></div></div>
             </div>
             <div class="card full">
-                <div class="card-title">RAM</div>
+                <div class="card-title">@@RAM@@</div>
                 <div class="metric-row">
                     <span class="metric-value" id="ram-val">--/-- GB</span>
                     <span class="metric-label">%<span id="ram-pct">--</span></span>
@@ -598,7 +713,7 @@ PHONE_HTML = """
                 <div class="bar"><div class="bar-fill" id="ram-bar" style="width: 0%; background: #89b4fa;"></div></div>
             </div>
             <div class="card full">
-                <div class="card-title">Disk</div>
+                <div class="card-title">@@DISK@@</div>
                 <div class="metric-row">
                     <span class="metric-value" id="disk-val">--/-- GB</span>
                     <span class="metric-label">%<span id="disk-pct">--</span></span>
@@ -606,23 +721,23 @@ PHONE_HTML = """
                 <div class="bar"><div class="bar-fill" id="disk-bar" style="width: 0%; background: #f9e2af;"></div></div>
             </div>
             <div class="card full">
-                <div class="card-title">Ağ</div>
+                <div class="card-title">@@NETWORK@@</div>
                 <div class="metric-row">
                     <span class="metric-value" id="net-down">↓ --</span>
                     <span class="metric-value" id="net-up">↑ --</span>
                 </div>
             </div>
             <div class="card full">
-                <div class="card-title">Aktif Süre</div>
+                <div class="card-title">@@UPTIME@@</div>
                 <div class="card-value" id="uptime" style="font-size: 16px;">--</div>
             </div>
             <div class="card full errors-card" id="errors-card" style="display: none;">
-                <div class="card-title">Sistem Hataları</div>
-                <div class="card-value" style="font-size: 14px; color: #f38ba8;" id="errors-count">-- Hata</div>
+                <div class="card-title">@@SYS_ERRORS@@</div>
+                <div class="card-value" style="font-size: 14px; color: #f38ba8;" id="errors-count">-- @@ERRORS@@</div>
                 <div class="card-sub" id="errors-msg"></div>
             </div>
         </div>
-        <div class="timestamp">Son güncelleme: <span id="timestamp">--:--:--</span></div>
+        <div class="timestamp">@@LAST_UPDATE@@ <span id="timestamp">--:--:--</span></div>
     </div>
     <script>
         const statusEl = document.getElementById('status');
@@ -722,7 +837,7 @@ PHONE_HTML = """
             }
             
             document.getElementById('timestamp').textContent = data.timestamp;
-            statusEl.textContent = 'Bağlı';
+            statusEl.textContent = '@@CONNECTED@@';
             statusEl.className = 'status';
         }
         
@@ -743,7 +858,7 @@ PHONE_HTML = """
                 if (eventSource === es) {
                     es.close();
                     eventSource = null;
-                    statusEl.textContent = 'Bağlantı koptu, yeniden deneniyor...';
+                    statusEl.textContent = '@@CONN_LOST@@';
                     statusEl.className = 'status disconnected';
                     sseTimer = setTimeout(connectSSE, 3000);
                 }
@@ -754,7 +869,7 @@ PHONE_HTML = """
             try {
                 const res = await fetch('/metrics', { credentials: 'same-origin' });
                 if (res.status === 403) {
-                    statusEl.textContent = 'Oturum süresi doldu';
+                    statusEl.textContent = '@@SESSION_EXPIRED@@';
                     statusEl.className = 'status disconnected';
                     if (eventSource) { eventSource.close(); eventSource = null; }
                     return;
@@ -762,7 +877,7 @@ PHONE_HTML = """
                 const data = await res.json();
                 updateUI(data);
             } catch (err) {
-                statusEl.textContent = 'Hata, yeniden deneniyor...';
+                statusEl.textContent = '@@ERR_RETRY@@';
                 statusEl.className = 'status disconnected';
             }
         }
@@ -790,10 +905,10 @@ PHONE_HTML = """
                     startMonitoring();
                     return true;
                 }
-                statusEl.textContent = 'Bağlantı kodu hatalı';
+                statusEl.textContent = '@@BAD_CODE@@';
                 statusEl.className = 'status disconnected';
             } catch (err) {
-                statusEl.textContent = 'Bağlantı hatası';
+                statusEl.textContent = '@@CONN_ERROR@@';
                 statusEl.className = 'status disconnected';
             }
             return false;
@@ -816,6 +931,40 @@ PHONE_HTML = """
 </body>
 </html>
 """
+
+def _build_phone_html(tls_active=False):
+    """PHONE_HTML'i güncel LANG ve TLS durumuna göre doldurur."""
+    html = PHONE_HTML
+    replacements = {
+        "@@TITLE@@": tr("Sistem Monitoru - Telefon"),
+        "@@APPNAME@@": tr("Sistem Monitoru"),
+        "@@CONNECTING@@": tr("Bağlanıyor..."),
+        "@@CONNECTED@@": tr("Bağlı"),
+        "@@CONN_LOST@@": tr("Bağlantı koptu, yeniden deneniyor..."),
+        "@@SESSION_EXPIRED@@": tr("Oturum süresi doldu"),
+        "@@ERR_RETRY@@": tr("Hata, yeniden deneniyor..."),
+        "@@BAD_CODE@@": tr("Bağlantı kodu hatalı"),
+        "@@CONN_ERROR@@": tr("Bağlantı hatası"),
+        "@@CPU_USE@@": tr("CPU Kullanım"),
+        "@@CPU_TEMP@@": tr("CPU Sıcaklık"),
+        "@@GPU_USE@@": tr("GPU Kullanım"),
+        "@@GPU_TEMP@@": tr("GPU Sıcaklık"),
+        "@@RAM@@": tr("RAM"),
+        "@@DISK@@": tr("Disk"),
+        "@@NETWORK@@": tr("Ağ"),
+        "@@UPTIME@@": tr("Aktif Süre"),
+        "@@SYS_ERRORS@@": tr("Sistem Hataları"),
+        "@@ERRORS@@": tr("Hata"),
+        "@@LAST_UPDATE@@": tr("Son güncelleme:"),
+    }
+    for token, value in replacements.items():
+        html = html.replace(token, value)
+    if tls_active:
+        html = html.replace("<!--PHONE_TLS_WARN-->", "")
+    else:
+        html = html.replace("<!--PHONE_TLS_WARN-->",
+                            '<div class="tls-warn">' + tr("Trafik sifresiz (HTTP). Guvenli baglanti icin TLS yapilandirin.") + '</div>')
+    return html
 
 def _list_adapters():
     """Güvenilir yerel ağ adaptörlerini listeler. VPN/public/sanal adaptörleri hariç tutar."""
@@ -867,7 +1016,7 @@ def start_phone_server(monitor, tls_cert=None, tls_key=None):
         adapters = _list_adapters()
         if not adapters:
             _safe_log("PHONE: guvenli adaptor bulunamadi, sunucu acilmadi")
-            return False, "Güvenli yerel ağ adaptörü bulunamadı (VPN/sanal/public ağlar desteklenmez).", None
+            return False, tr("Güvenli yerel ağ adaptörü bulunamadı (VPN/sanal/public ağlar desteklenmez)."), None
         bind_ip = adapters[0][1]
         bind_name = adapters[0][0]
         try:
@@ -893,7 +1042,7 @@ def start_phone_server(monitor, tls_cert=None, tls_key=None):
             _phone_tls_active = False
             _stop_cleanup_thread()
             _safe_log(f"PHONE: sunucu baslatilamadi: {e}")
-            return False, f"Telefon sunucusu başlatılamadı: {e}", None
+            return False, tr("Telefon sunucusu başlatılamadı: {e}", e=e), None
 
 def stop_phone_server():
     global _phone_server, _phone_server_thread, _pairing_code, _pairing_expiry, _phone_tls_active
@@ -1011,7 +1160,7 @@ class Monitor(QMainWindow):
         self._cmp = False; self._wa = 200; self._sz = 0
         self._phone_active = False
         self._phone_dialog = None
-        self.setWindowTitle("Sistem Monitoru")
+        self.setWindowTitle(tr("Sistem Monitoru"))
         icon_path = os.path.join(getattr(sys, '_MEIPASS', os.path.dirname(__file__) if '__file__' in dir() else '.'), "icon.png")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
@@ -1021,7 +1170,7 @@ class Monitor(QMainWindow):
         self.ml = QVBoxLayout(cw); self.ml.setContentsMargins(8,6,8,6); self.ml.setSpacing(5)
 
         tb = QHBoxLayout(); tb.setSpacing(5)
-        self.hdr = QLabel("Sistem Monitoru")
+        self.hdr = QLabel(tr("Sistem Monitoru"))
         self.hdr.setStyleSheet("color:#cba6f7; font-size:13px; font-weight:bold; background:transparent;")
         tb.addWidget(self.hdr)
         self.chdr = QLabel("SM")
@@ -1031,17 +1180,23 @@ class Monitor(QMainWindow):
         tb.addStretch()
         self._phone_btn = QPushButton("📱")
         self._phone_btn.setFixedSize(28,28)
-        self._phone_btn.setToolTip("Telefonla Bağla (F2)")
+        self._phone_btn.setToolTip(tr("Telefonla Bağla (F2)"))
         self._phone_btn.setStyleSheet("QPushButton{background:rgba(60,60,80,200);border-radius:14px;color:#cdd6f4;font-size:14px;border:none;} QPushButton:hover{background:rgba(80,80,100,220);} QPushButton:checked{background:#cba6f7;color:#1e1e2e;}")
         self._phone_btn.setCheckable(True)
         self._phone_btn.clicked.connect(self._toggle_phone)
         tb.addWidget(self._phone_btn)
         self._help_btn = QPushButton("?")
         self._help_btn.setFixedSize(18,18)
-        self._help_btn.setToolTip("Kısayollar (F1)")
+        self._help_btn.setToolTip(tr("Kısayollar (F1)"))
         self._help_btn.setStyleSheet("QPushButton{background:rgba(60,60,80,200);border-radius:9px;color:#cdd6f4;font-weight:bold;border:none;} QPushButton:hover{background:rgba(80,80,100,220);}")
         self._help_btn.clicked.connect(self._show_help)
         tb.addWidget(self._help_btn)
+        self._lang_btn = QPushButton("TR")
+        self._lang_btn.setFixedSize(28,18)
+        self._lang_btn.setToolTip(tr("Dil"))
+        self._lang_btn.setStyleSheet("QPushButton{background:rgba(60,60,80,200);border-radius:9px;color:#cdd6f4;font-weight:bold;font-size:9px;border:none;} QPushButton:hover{background:rgba(80,80,100,220);}")
+        self._lang_btn.clicked.connect(self._toggle_lang)
+        tb.addWidget(self._lang_btn)
         self._bm = QPushButton("-"); self._bm.setFixedSize(18,18)
         self._bm.setStyleSheet("QPushButton{background:rgba(60,60,80,200);border-radius:9px;color:#cdd6f4;font-weight:bold;border:none;} QPushButton:hover{background:rgba(80,80,100,220);}")
         self._bm.clicked.connect(lambda: self._rsz(-1))
@@ -1059,16 +1214,17 @@ class Monitor(QMainWindow):
 
         self.gr = QGridLayout(); self.gr.setSpacing(5); self.ml.addLayout(self.gr)
         self._cards = []
-        def ac(t, c): cd = Card(t, c); self._cards.append(cd); return cd
-        self.gr.addWidget(ac("CPU Kullanim","#a6e3a1"),0,0)
-        self.gr.addWidget(ac("CPU Sicaklik","#fab387"),0,1)
-        self.gr.addWidget(ac("GPU Kullanim","#cba6f7"),1,0)
-        self.gr.addWidget(ac("GPU Sicaklik","#f38ba8"),1,1)
-        self.gr.addWidget(ac("RAM","#89b4fa"),2,0)
-        self.gr.addWidget(ac("Disk","#f9e2af"),2,1)
-        self.gr.addWidget(ac("Ag","#94e2d5"),3,0,1,2)
-        self.gr.addWidget(ac("Aktif Sure","#f5c2e7"),4,0,1,2)
-        self._elc = ac("Windows Hata (tikla ac)","#f38ba8")
+        def ac(t, c): cd = Card(tr(t), c); self._cards.append(cd); return cd
+        self._card_keys = []
+        self.gr.addWidget(ac("CPU Kullanim","#a6e3a1"),0,0); self._card_keys.append("CPU Kullanim")
+        self.gr.addWidget(ac("CPU Sicaklik","#fab387"),0,1); self._card_keys.append("CPU Sicaklik")
+        self.gr.addWidget(ac("GPU Kullanim","#cba6f7"),1,0); self._card_keys.append("GPU Kullanim")
+        self.gr.addWidget(ac("GPU Sicaklik","#f38ba8"),1,1); self._card_keys.append("GPU Sicaklik")
+        self.gr.addWidget(ac("RAM","#89b4fa"),2,0); self._card_keys.append("RAM")
+        self.gr.addWidget(ac("Disk","#f9e2af"),2,1); self._card_keys.append("Disk")
+        self.gr.addWidget(ac("Ag","#94e2d5"),3,0,1,2); self._card_keys.append("Ag")
+        self.gr.addWidget(ac("Aktif Sure","#f5c2e7"),4,0,1,2); self._card_keys.append("Aktif Sure")
+        self._elc = ac("Windows Hata (tikla ac)","#f38ba8"); self._card_keys.append("Windows Hata (tikla ac)")
         self.gr.addWidget(self._elc,5,0,1,2)
         self._elc.v.setWordWrap(True)
         self._elc.set_clickable(self._open_event_log)
@@ -1137,27 +1293,39 @@ class Monitor(QMainWindow):
             self._tray.setIcon(QIcon(icon_path))
         else:
             self._tray.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon))
-        self._tray.setToolTip("Sistem Monitoru")
+        self._tray.setToolTip(tr("Sistem Monitoru"))
         
-        tray_menu = QMenu()
-        show_action = QAction("Göster", self)
-        show_action.triggered.connect(self._show_from_tray)
-        tray_menu.addAction(show_action)
+        self._tray_menu = QMenu()
+        self._tray_show_action = QAction(tr("Göster"), self)
+        self._tray_show_action.triggered.connect(self._show_from_tray)
+        self._tray_menu.addAction(self._tray_show_action)
         
-        self._tray_phone_action = QAction("Telefon Bağlantısı: Kapalı", self)
+        self._tray_phone_action = QAction(tr("Telefon Bağlantısı: Kapalı"), self)
         self._tray_phone_action.triggered.connect(self._toggle_phone)
-        tray_menu.addAction(self._tray_phone_action)
+        self._tray_menu.addAction(self._tray_phone_action)
         
-        help_action = QAction("Kısayollar", self)
-        help_action.triggered.connect(self._show_help)
-        tray_menu.addAction(help_action)
+        self._tray_help_action = QAction(tr("Kısayollar"), self)
+        self._tray_help_action.triggered.connect(self._show_help)
+        self._tray_menu.addAction(self._tray_help_action)
+
+        lang_menu = self._tray_menu.addMenu(tr("Dil"))
+        self._lang_tr = QAction("Türkçe", self)
+        self._lang_tr.setCheckable(True)
+        self._lang_tr.setChecked(LANG == "tr")
+        self._lang_tr.triggered.connect(lambda: self._set_lang("tr"))
+        lang_menu.addAction(self._lang_tr)
+        self._lang_en = QAction("English", self)
+        self._lang_en.setCheckable(True)
+        self._lang_en.setChecked(LANG == "en")
+        self._lang_en.triggered.connect(lambda: self._set_lang("en"))
+        lang_menu.addAction(self._lang_en)
         
-        tray_menu.addSeparator()
-        quit_action = QAction("Çıkış", self)
-        quit_action.triggered.connect(self._quit_app)
-        tray_menu.addAction(quit_action)
+        self._tray_menu.addSeparator()
+        self._tray_quit_action = QAction(tr("Çıkış"), self)
+        self._tray_quit_action.triggered.connect(self._quit_app)
+        self._tray_menu.addAction(self._tray_quit_action)
         
-        self._tray.setContextMenu(tray_menu)
+        self._tray.setContextMenu(self._tray_menu)
         self._tray.activated.connect(self._tray_activated)
         self._tray.show()
 
@@ -1183,7 +1351,7 @@ class Monitor(QMainWindow):
         if self._phone_active:
             e.ignore()
             self.hide()
-            self._tray.showMessage("Sistem Monitoru", "Uygulama arka planda çalışıyor. Telefon bağlantısı aktif.", QSystemTrayIcon.MessageIcon.Information, 3000)
+            self._tray.showMessage(tr("Sistem Monitoru"), tr("Uygulama arka planda çalışıyor. Telefon bağlantısı aktif."), QSystemTrayIcon.MessageIcon.Information, 3000)
         else:
             stop_phone_server()
             self._tray.hide()
@@ -1195,13 +1363,49 @@ class Monitor(QMainWindow):
         else:
             self._start_phone()
 
+    def _toggle_lang(self):
+        self._set_lang("en" if LANG == "tr" else "tr")
+
+    def _set_lang(self, lang):
+        set_lang(lang)
+        try:
+            s = QSettings("SistemMonitor", "SistemMonitor")
+            s.setValue("language", lang)
+        except Exception:
+            pass
+        self._retranslate()
+
+    def _retranslate(self):
+        try:
+            self.setWindowTitle(tr("Sistem Monitoru"))
+            self.hdr.setText(tr("Sistem Monitoru"))
+            for i, cd in enumerate(self._cards):
+                if i < len(self._card_keys):
+                    cd.t.setText(tr(self._card_keys[i]))
+            self._phone_btn.setToolTip(tr("Telefon Bağlantısı Aktif (F2)") if self._phone_active else tr("Telefonla Bağla (F2)"))
+            self._help_btn.setToolTip(tr("Kısayollar (F1)"))
+            self._lang_btn.setText("TR" if LANG == "tr" else "EN")
+            self._lang_btn.setToolTip(tr("Dil"))
+            self._tray.setToolTip(tr("Sistem Monitoru"))
+            self._tray_show_action.setText(tr("Göster"))
+            self._tray_help_action.setText(tr("Kısayollar"))
+            self._tray_quit_action.setText(tr("Çıkış"))
+            self._tray_phone_action.setText(tr("Telefon Bağlantısı: Açık") if self._phone_active else tr("Telefon Bağlantısı: Kapalı"))
+            self._lang_tr.setChecked(LANG == "tr")
+            self._lang_en.setChecked(LANG == "en")
+            if hasattr(self, "_ev_cache"):
+                ec, em = self._ev_cache
+                self._render_event_card(ec, em)
+        except Exception:
+            pass
+
     def _start_phone(self):
         ok, result, pair = start_phone_server(self)
         if ok:
             self._phone_active = True
             self._phone_btn.setChecked(True)
-            self._phone_btn.setToolTip("Telefon Bağlantısı Aktif (F2)")
-            self._tray_phone_action.setText("Telefon Bağlantısı: Açık")
+            self._phone_btn.setToolTip(tr("Telefon Bağlantısı Aktif (F2)"))
+            self._tray_phone_action.setText(tr("Telefon Bağlantısı: Açık"))
             ip = result
             port = PHONE_SERVER_PORT
             scheme = "https" if _phone_tls_active else "http"
@@ -1210,18 +1414,18 @@ class Monitor(QMainWindow):
             result_code = self._phone_dialog.exec()
             if result_code == 1:
                 self.hide()
-                self._tray.showMessage("Sistem Monitoru", f"Telefon bağlantısı aktif: {url}", QSystemTrayIcon.MessageIcon.Information, 3000)
+                self._tray.showMessage(tr("Sistem Monitoru"), tr("Telefon bağlantısı aktif: {url}", url=url), QSystemTrayIcon.MessageIcon.Information, 3000)
             elif result_code == 2:
                 self._stop_phone()
         else:
-            QMessageBox.critical(self, "Hata", f"Telefon sunucusu başlatılamadı:\n{result}")
+            QMessageBox.critical(self, tr("Hata"), tr("Telefon sunucusu başlatılamadı:\n{msg}", msg=result))
 
     def _stop_phone(self):
         stop_phone_server()
         self._phone_active = False
         self._phone_btn.setChecked(False)
-        self._phone_btn.setToolTip("Telefonla Bağla (F2)")
-        self._tray_phone_action.setText("Telefon Bağlantısı: Kapalı")
+        self._phone_btn.setToolTip(tr("Telefonla Bağla (F2)"))
+        self._tray_phone_action.setText(tr("Telefon Bağlantısı: Kapalı"))
         if self._phone_dialog:
             self._phone_dialog.close()
             self._phone_dialog = None
@@ -1305,15 +1509,15 @@ class Monitor(QMainWindow):
         elc = self._elc
         if ec is None:
             elc.v.setStyleSheet(f"color:#6c7086; font-size:{9 if self._cmp else 11}px; font-weight:bold; background:transparent;")
-            elc.upd("Kontrol edilemedi")
+            elc.upd(tr("Kontrol edilemedi"))
         elif ec == "0":
             elc.v.setStyleSheet(f"color:#a6e3a1; font-size:{10 if self._cmp else 13}px; font-weight:bold; background:transparent;")
             elc.v.setWordWrap(False)
-            elc.upd("Sistem Temiz \u2713")
+            elc.upd(tr("Sistem Temiz ✓"))
         else:
             elc.v.setStyleSheet(f"color:#f38ba8; font-size:{9 if self._cmp else 11}px; font-weight:bold; background:transparent;")
             elc.v.setWordWrap(True)
-            txt = f"{ec} Kritik Hata"
+            txt = tr("{n} Kritik Hata", n=ec)
             if em: txt += f"\n{em}..."
             elc.upd(txt)
 
@@ -1328,18 +1532,18 @@ class Monitor(QMainWindow):
                 capture_output=True, timeout=15, creationflags=subprocess.CREATE_NO_WINDOW)
         except subprocess.TimeoutExpired:
             _safe_log("EVENT: liste zamansaimi")
-            return EventQueryResult(ok=False, error="Zaman aşımı")
+            return EventQueryResult(ok=False, error=tr("Zaman aşımı"))
         except (subprocess.SubprocessError, OSError) as e:
             _safe_log(f"EVENT: calistirma hatasi: {e}")
-            return EventQueryResult(ok=False, error="PowerShell çalıştırılamadı")
+            return EventQueryResult(ok=False, error=tr("PowerShell çalıştırılamadı"))
         if r.returncode != 0:
             _safe_log(f"EVENT: PowerShell hata kodu {r.returncode}")
-            return EventQueryResult(ok=False, error=f"PowerShell hata kodu {r.returncode}")
+            return EventQueryResult(ok=False, error=tr("PowerShell hata kodu {rc}", rc=r.returncode))
         raw = r.stdout.decode('utf-8', errors='replace')
         data = _parse_event_json(raw)
         if data is None:
             _safe_log("EVENT: JSON cozulemedi")
-            return EventQueryResult(ok=False, error="JSON ayrıştırma hatası")
+            return EventQueryResult(ok=False, error=tr("JSON ayrıştırma hatası"))
         return EventQueryResult(ok=True, events=data)
 
     def _open_event_log(self):
@@ -1435,11 +1639,45 @@ _EXP = {
     26: "Uygulama acilirken hata. Sistem uyumlulugunu kontrol edin.",
 }
 
+_EXP_EN = {
+    41: "Unexpected shutdown (Kernel-Power). The computer shut down suddenly or experienced a power outage.",
+    55: "NTFS file system corruption detected. There may be a disk error or filesystem damage.",
+    51: "Error during paging. There may be a disk or memory problem.",
+    57: "Data read/write error. Check disk health.",
+    116: "Disk error. The disk may be faulty, make a backup.",
+    134: "Memory error. There may be a physical problem with the RAM modules.",
+    137: "Out of memory. Applications could not find enough RAM.",
+    153: "Disk error detected. A disk replacement may be required.",
+    1000: "Application error. A program crashed unexpectedly.",
+    1001: "Windows Error Reporting. An application or system component crashed.",
+    1002: "Application not responding. A program froze.",
+    1014: "DNS resolution error. Check internet connection or DNS settings.",
+    7000: "Service failed to start. A Windows service stopped running.",
+    7001: "Service dependency error. A required service is not running.",
+    7023: "Service terminated with an error. Check the service status.",
+    7024: "Service terminated with a specific error.",
+    7030: "Service security type error. Check the service permissions.",
+    7031: "Service terminated unexpectedly. Automatic restart can be configured.",
+    7034: "Service hung or crashed.",
+    10005: "DCOM error. A component is not registered or is missing.",
+    10010: "DCOM server not found. Registry or service problem.",
+    10016: "DCOM permission error. An application does not have sufficient permissions.",
+    6008: "Windows shut down unexpectedly during the previous boot.",
+    1074: "User or system initiated a restart/shutdown.",
+    1076: "The computer restarted after a failed boot.",
+    7: "Device driver error. A hardware component is having issues.",
+    11: "Driver error. The hardware driver stopped working.",
+    12: "Device driver lockup.",
+    26: "Error while launching application. Check system compatibility.",
+}
+
 def _exp(eid):
     try:
         eid = int(eid)
     except (ValueError, TypeError):
-        return "Bilinmeyen hata kodu."
+        return tr("Bilinmeyen hata kodu.")
+    if LANG == "en":
+        return _EXP_EN.get(eid, tr("Hata kodu {eid}. Windows olay goruntuleyiciden detayli inceleyin.", eid=eid))
     return _EXP.get(eid, f"Hata kodu {eid}. Windows olay goruntuleyiciden detayli inceleyin.")
 
 def _compute_net_speed(prev_bytes, cur_bytes, elapsed_s):
@@ -1560,7 +1798,7 @@ class PhoneConnectDialog(QDialog):
         super().__init__(parent)
         self._expiry = expiry or (time.time() + PHONE_PAIR_TTL)
         self._countdown_timer = None
-        self.setWindowTitle("Telefon Bağlantısı")
+        self.setWindowTitle(tr("Telefon Bağlantısı"))
         self.setFixedSize(380, 580)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.setStyleSheet("""
@@ -1573,7 +1811,7 @@ class PhoneConnectDialog(QDialog):
         """)
         lo = QVBoxLayout(self); lo.setContentsMargins(20,16,20,16); lo.setSpacing(10)
         
-        title = QLabel("<b>Telefonla Bağlantı Aktif</b>")
+        title = QLabel("<b>" + tr("Telefonla Bağlantı Aktif") + "</b>")
         title.setStyleSheet("color:#cba6f7; font-size:14px; background:transparent;")
         title.setAlignment(Qt.AlignCenter)
         lo.addWidget(title)
@@ -1608,47 +1846,47 @@ class PhoneConnectDialog(QDialog):
                 qr_label.setPixmap(pixmap)
                 qr_label.setAlignment(Qt.AlignCenter)
                 lo.addWidget(qr_label)
-                hint = QLabel("QR kodu telefonla tarayın")
+                hint = QLabel(tr("QR kodu telefonla tarayın"))
                 hint.setStyleSheet("color:#6c7086; font-size:11px; background:transparent;")
                 hint.setAlignment(Qt.AlignCenter)
                 lo.addWidget(hint)
             except Exception:
                 _safe_log("QR olusturulamadi")
         else:
-            hint = QLabel("QR kod için: pip install qrcode[pil]")
+            hint = QLabel(tr("QR kod için: pip install qrcode[pil]"))
             hint.setStyleSheet("color:#6c7086; font-size:11px; background:transparent;")
             hint.setAlignment(Qt.AlignCenter)
             lo.addWidget(hint)
 
-        secure = QLabel("Bağlantı kodu 60 saniye geçerli ve tek kullanımlıktır. "
-                        "Kod kullanıldıktan sonra oturum çereziyle erişim sağlanır.")
+        secure = QLabel(tr("Bağlantı kodu 60 saniye geçerli ve tek kullanımlıktır. "
+                           "Kod kullanıldıktan sonra oturum çereziyle erişim sağlanır."))
         secure.setStyleSheet("color:#a6e3a1; font-size:10px; background:transparent;")
         secure.setAlignment(Qt.AlignCenter)
         secure.setWordWrap(True)
         lo.addWidget(secure)
         
-        local_only = QLabel("⚠ Yalnızca bu yerel ağ IP adresine bağlanılabilir.\n"
-                            "VPN, sanal veya public ağlarda sunucu açılmaz.")
+        local_only = QLabel(tr("⚠ Yalnızca bu yerel ağ IP adresine bağlanılabilir.\n"
+                               "VPN, sanal veya public ağlarda sunucu açılmaz."))
         local_only.setStyleSheet("color:#f9e2af; font-size:10px; background:transparent;")
         local_only.setAlignment(Qt.AlignCenter)
         local_only.setWordWrap(True)
         lo.addWidget(local_only)
 
         if tls:
-            tls_note = QLabel("🔒 HTTPS (TLS) aktif. Trafik şifreleniyor.")
+            tls_note = QLabel(tr("🔒 HTTPS (TLS) aktif. Trafik şifreleniyor."))
             tls_note.setStyleSheet("color:#a6e3a1; font-size:10px; background:transparent;")
             tls_note.setAlignment(Qt.AlignCenter)
             tls_note.setWordWrap(True)
             lo.addWidget(tls_note)
         else:
-            tls_note = QLabel("⚠ HTTP modunda trafik şifreli değildir.\n"
-                              "Sertifika/private key verilirse HTTPS kullanılabilir.")
+            tls_note = QLabel(tr("⚠ HTTP modunda trafik şifreli değildir.\n"
+                                 "Sertifika/private key verilirse HTTPS kullanılabilir."))
             tls_note.setStyleSheet("color:#f38ba8; font-size:10px; background:transparent;")
             tls_note.setAlignment(Qt.AlignCenter)
             tls_note.setWordWrap(True)
             lo.addWidget(tls_note)
         
-        info = QLabel("Uygulama arka planda çalışmaya devam edecek.\nTelefondan değerleri görüntüleyebilirsiniz.")
+        info = QLabel(tr("Uygulama arka planda çalışmaya devam edecek.\nTelefondan değerleri görüntüleyebilirsiniz."))
         info.setStyleSheet("color:#a6adc8; font-size:11px; background:transparent;")
         info.setAlignment(Qt.AlignCenter)
         info.setWordWrap(True)
@@ -1663,11 +1901,11 @@ class PhoneConnectDialog(QDialog):
 
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
-        self.minimize_btn = QPushButton("Simgeye Küçült")
+        self.minimize_btn = QPushButton(tr("Simgeye Küçült"))
         self.minimize_btn.clicked.connect(lambda: self.done(1))
         btn_layout.addWidget(self.minimize_btn)
         
-        self.stop_btn = QPushButton("Bağlantıyı Kes")
+        self.stop_btn = QPushButton(tr("Bağlantıyı Kes"))
         self.stop_btn.setObjectName("stopBtn")
         self.stop_btn.clicked.connect(lambda: self.done(2))
         btn_layout.addWidget(self.stop_btn)
@@ -1682,9 +1920,9 @@ class PhoneConnectDialog(QDialog):
     def _update_countdown(self):
         left = max(0, int(self._expiry - time.time()))
         if left > 0:
-            self.countdown_label.setText(f"Bağlantı süresi: {left} sn")
+            self.countdown_label.setText(tr("Bağlantı süresi: {left} sn", left=left))
         else:
-            self.countdown_label.setText("Bağlantı kodu süresi doldu")
+            self.countdown_label.setText(tr("Bağlantı kodu süresi doldu"))
             if self._countdown_timer:
                 self._countdown_timer.stop()
 
@@ -1697,16 +1935,16 @@ class EventLogDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._mon = parent
-        self.setWindowTitle("Windows Hata Kayitlari")
+        self.setWindowTitle(tr("Windows Hata Kayitlari"))
         self.setStyleSheet("QDialog{background:#1e1e2e;} QLabel{color:#cdd6f4;background:transparent;}")
         self.resize(620, 520)
         self._lo = QVBoxLayout(self); self._lo.setContentsMargins(12,10,12,10); self._lo.setSpacing(8)
 
-        h = QLabel("<b>Son 48 Saatteki Sistem Hatalari</b>")
+        h = QLabel("<b>" + tr("Son 48 Saatteki Sistem Hatalari") + "</b>")
         h.setStyleSheet("color:#cba6f7; font-size:14px; background:transparent;")
         self._lo.addWidget(h)
 
-        self._loading = QLabel("Hatalar kontrol ediliyor...")
+        self._loading = QLabel(tr("Hatalar kontrol ediliyor..."))
         self._loading.setStyleSheet("color:#f9e2af; font-size:12px; background:transparent;")
         self._loading.setAlignment(Qt.AlignCenter)
         self._lo.addWidget(self._loading)
@@ -1715,7 +1953,7 @@ class EventLogDialog(QDialog):
         self._sc.setStyleSheet("QScrollArea{border:none;background:transparent;} QScrollBar:vertical{width:6px;background:#313244;border-radius:3px;} QScrollBar::handle:vertical{background:#585b70;border-radius:3px;} QScrollBar::add-line:vertical{height:0} QScrollBar::sub-line:vertical{height:0}")
         self._lo.addWidget(self._sc)
 
-        b = QPushButton("Kapat")
+        b = QPushButton(tr("Kapat"))
         b.setStyleSheet("QPushButton{background:#cba6f7;color:#1e1e2e;border:none;border-radius:6px;padding:7px 24px;font-weight:bold;} QPushButton:hover{background:#d8b9ff;}")
         b.clicked.connect(self.accept)
         self._lo.addWidget(b, 0, Qt.AlignCenter)
@@ -1739,11 +1977,11 @@ class EventLogDialog(QDialog):
     def _on_error(self, err):
         self._loading.hide()
         _safe_log(f"EVENT: dialog worker hatasi: {err}")
-        self._render_result(EventQueryResult(ok=False, error="Beklenmeyen hata"))
+        self._render_result(EventQueryResult(ok=False, error=tr("Beklenmeyen hata")))
 
     def _render_result(self, result):
         if not result.ok:
-            lb = QLabel("Windows olay kayıtları kontrol edilemedi.")
+            lb = QLabel(tr("Windows olay kayıtları kontrol edilemedi."))
             if result.error:
                 lb.setText(f"{lb.text()}\n({result.error})")
             lb.setStyleSheet("color:#f38ba8; font-size:12px; background:transparent;")
@@ -1752,7 +1990,7 @@ class EventLogDialog(QDialog):
             self._lo.insertWidget(1, lb)
             return
         if result.empty:
-            lb = QLabel("Belirtilen zaman aralığında olay kaydı bulunamadı.")
+            lb = QLabel(tr("Belirtilen zaman aralığında olay kaydı bulunamadı."))
             lb.setStyleSheet("color:#a6e3a1; font-size:12px; background:transparent;")
             lb.setAlignment(Qt.AlignCenter)
             self._lo.insertWidget(1, lb)
@@ -1803,7 +2041,7 @@ class EventLogDialog(QDialog):
 class WelcomeDialog(QDialog):
     def __init__(self, first_run=False):
         super().__init__()
-        self.setWindowTitle("Sistem Monitoru - Kisa Yollar")
+        self.setWindowTitle(tr("Sistem Monitoru - Kisa Yollar"))
         self.setFixedSize(380, 360)
         self.setWindowFlags(Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         if first_run:
@@ -1819,31 +2057,31 @@ class WelcomeDialog(QDialog):
         """)
         lo = QVBoxLayout(self); lo.setContentsMargins(20,16,20,16); lo.setSpacing(6)
 
-        t = QLabel("<b>Sistem Monitoru - Kisa Yollar</b>")
+        t = QLabel("<b>" + tr("Sistem Monitoru - Kisa Yollar") + "</b>")
         t.setStyleSheet("color:#cba6f7; font-size:13px; background:transparent;")
         t.setAlignment(Qt.AlignCenter)
         lo.addWidget(t)
 
         lines = [
-            "<b>F1</b>  - Bu kısayolları göster",
-            "<b>F2</b>  - Telefon bağlantısını aç/kapat",
-            "<b>F4</b>  - Gizli simgelere kucult / geri getir",
-            "<b>Esc</b> - Overlay modundan gizli simgelere kucult",
-            "<b>Ctrl+B</b> - Pencereyi buyut",
-            "<b>Ctrl+S</b> - Pencereyi kucult",
-            "<b>F5</b>  - Verileri yenile",
+            tr("<b>F1</b>  - Bu kısayolları göster"),
+            tr("<b>F2</b>  - Telefon bağlantısını aç/kapat"),
+            tr("<b>F4</b>  - Gizli simgelere kucult / geri getir"),
+            tr("<b>Esc</b> - Overlay modundan gizli simgelere kucult"),
+            tr("<b>Ctrl+B</b> - Pencereyi buyut"),
+            tr("<b>Ctrl+S</b> - Pencereyi kucult"),
+            tr("<b>F5</b>  - Verileri yenile"),
             "",
-            "<i>Slider: Saydamlik ayari (solda seffaf, sagda opak)</i>",
-            "<i>+ / - : Pencere boyutu (tiklanabilir)</i>",
+            tr("<i>Slider: Saydamlik ayari (solda seffaf, sagda opak)</i>"),
+            tr("<i>+ / - : Pencere boyutu (tiklanabilir)</i>"),
         ]
         for l in lines:
             lb = QLabel(l); lb.setStyleSheet("color:#bac2de; font-size:11px; background:transparent;")
             lo.addWidget(lb)
 
         lo.addStretch()
-        self.cb = QCheckBox("Bir daha gosterme")
+        self.cb = QCheckBox(tr("Bir daha gosterme"))
         lo.addWidget(self.cb)
-        b = QPushButton("Kapat")
+        b = QPushButton(tr("Kapat"))
         b.clicked.connect(self.accept)
         lo.addWidget(b, 0, Qt.AlignCenter)
 
@@ -1851,6 +2089,8 @@ def main():
     a = QApplication(sys.argv); a.setStyle("Fusion"); a.setFont(QFont("Segoe UI", 9))
     a.setQuitOnLastWindowClosed(False)
     s = QSettings("SistemMonitor", "SistemMonitor")
+    saved_lang = s.value("language", "tr")
+    set_lang("en" if saved_lang == "en" else "tr")
     if not s.value("nofirstrun", False, type=bool):
         d = WelcomeDialog(first_run=True)
         d.show(); d.raise_(); d.activateWindow()
