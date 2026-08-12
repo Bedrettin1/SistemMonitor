@@ -199,6 +199,9 @@ calculation, TLS cookie/validation, log redaction and i18n/translation.
 - 🐞 Open an **[Issue](/Bedrettin1/SistemMonitor/issues)** for bugs or suggestions.
 - 🔀 To contribute: fork → feature branch (`git checkout -b feature`) → PR. Security tests run
   automatically in CI; merges are blocked until tests pass.
+- 📜 **License:** This project is licensed under **CC BY-NC 4.0** — you may modify and
+  share the code freely, but **commercial use (including resale) requires the author's
+  written permission**. For commercial use, request permission at **kacarbedo@gmail.com**.
 
 ## 🖥️ Requirements
 

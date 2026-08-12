@@ -196,6 +196,9 @@ JSON normalizasyonu, ağ hızı hesabı, TLS cookie/validasyon, log redaction ve
 - 🐞 Hata veya öneri için **[Issues](/Bedrettin1/SistemMonitor/issues)** açın.
 - 🔀 Katkı için: fork → özellik dalı (`git checkout -b ozellik`) → PR. Güvenlik testleri
   CI'da otomatik çalışır; testler geçmeden merge edilmez.
+- 📜 **Lisans:** Bu proje **CC BY-NC 4.0** ile lisanslanmıştır — kodu değiştirip paylaşmak
+  serbesttir, ancak **ticari kullanım (satış dahil) yazarın yazılı iznine tabidir**.
+  Ticari kullanım için: **kacarbedo@gmail.com** adresinden izin isteyin.
 
 ## 🖥️ Gereksinimler
 
